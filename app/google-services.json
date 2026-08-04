@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "131259267162",
+    "project_id": "codebox-87958",
+    "storage_bucket": "codebox-87958.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:131259267162:android:62caffb78bb9481fddc063",
+        "android_client_info": {
+          "package_name": "com.example.codebox"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCf11NWx3YZmsrDI6JBB7ciLJxoAf8pkd8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
