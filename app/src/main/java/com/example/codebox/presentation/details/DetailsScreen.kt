@@ -35,6 +35,7 @@ import com.example.codebox.presentation.theme.TerminalGreenDark
 import com.example.codebox.presentation.theme.TextMuted
 import com.example.codebox.presentation.theme.TextSecondary
 
+
 @Composable
 fun DetailScreen(
     item: Item,
