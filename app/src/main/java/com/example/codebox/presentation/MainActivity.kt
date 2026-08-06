@@ -45,7 +45,8 @@ class MainActivity : ComponentActivity() {
                         FeedScreen(
                             onCreateItem = {
                                 navController.navigate("create")
-                            }
+                            },
+                            onItemClick = { itemId -> navController.navigate("detail/$itemId")}
                         )
                     }
 

@@ -2,6 +2,7 @@ package com.example.codebox.presentation.feed
 
 import android.R.style
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,12 +45,14 @@ import com.example.codebox.presentation.theme.TextSecondary
 @Composable
 fun FeedScreen(
     onCreateItem: () -> Unit,
+    onItemClick: (String) -> Unit,
     viewModel: FeedViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     FeedScreenContent(
         uiState = uiState,
-        onCreateItem = onCreateItem
+        onCreateItem = onCreateItem,
+        onItemClick = onItemClick
     )
 }
 
@@ -60,7 +63,8 @@ fun FeedScreen(
 @Composable
 fun FeedScreenContent(
     uiState: FeedUiState,
-    onCreateItem: () -> Unit
+    onCreateItem: () -> Unit,
+    onItemClick: (String) -> Unit
 ) {
     Scaffold(
         floatingActionButton = {
@@ -119,7 +123,8 @@ fun FeedScreenContent(
                     } else {
                         LazyColumn(modifier = Modifier.fillMaxSize()) {
                             items(state.items, key = { it.id }) { item ->
-                                ItemCard(item = item)
+                                ItemCard(item = item,
+                                    onClick = { onItemClick(item.id)})
                             }
                         }
                     }
@@ -130,10 +135,15 @@ fun FeedScreenContent(
 }
 
 @Composable
-fun ItemCard(item: Item) {
+fun ItemCard(
+    item: Item,
+    onClick: () -> Unit
+
+) {
     OutlinedCard(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onClick()}
             .padding(horizontal = 16.dp, vertical = 6.dp),
         shape = RoundedCornerShape(0.dp),
         colors = androidx.compose.material3.CardDefaults.outlinedCardColors(
@@ -196,7 +206,8 @@ fun FeedScreenFullPreview() {
                     Item(name = "docker", rating = 4, description = "containers")
                 )
             ),
-            onCreateItem = {}
+            onCreateItem = {},
+            onItemClick = {}
         )
     }
 }
