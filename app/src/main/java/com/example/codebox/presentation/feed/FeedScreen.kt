@@ -1,39 +1,31 @@
 package com.example.codebox.presentation.feed
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.codebox.domain.Item
-import com.example.codebox.presentation.theme.CodeboxTheme
-import com.example.codebox.presentation.theme.TerminalGreen
-import com.example.codebox.presentation.theme.TerminalGreenBorder
-import com.example.codebox.presentation.theme.TerminalGreenDark
-import com.example.codebox.presentation.theme.TextSecondary
+import com.example.codebox.presentation.theme.*
+
+private val Hairline = 2.5f
+private val Wire = 1.5f
+private val Accent = 2f
+private val LineColor = Color(0xFF777777)
 
 @Composable
 fun FeedScreen(
@@ -58,53 +50,49 @@ fun FeedScreenContent(
     onItemClick: (String) -> Unit,
     onProfileClick: () -> Unit = {}
 ) {
-    Scaffold(
-        topBar = {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PureBlack)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            // ── Шапка ──
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(top = 32.dp, bottom = 12.dp)
             ) {
                 Text(
                     text = "// codebox",
                     style = MaterialTheme.typography.titleLarge,
+                    color = TextPrimary,
                     modifier = Modifier.align(Alignment.CenterStart)
                 )
-                TextButton(
-                    onClick = onProfileClick,
-                    modifier = Modifier.align(Alignment.CenterEnd)
-                ) {
-                    Text("[ профиль ]", color = TerminalGreen)
-                }
+                Text(
+                    text = "[ профиль ]",
+                    color = TerminalGreen,
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .clickable { onProfileClick() }
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+                HorizontalLine(
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    strokeWidth = Hairline
+                )
             }
-        },
-        floatingActionButton = {
-            Button(
-                onClick = onCreateItem,
-                shape = RoundedCornerShape(0.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = TerminalGreenDark,
-                    contentColor = TerminalGreen
-                ),
-                border = BorderStroke(1.dp, TerminalGreenBorder)
-            ) {
-                Text("[+]")
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-        ) {
+
             when (val state = uiState) {
                 is FeedUiState.Loading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = TerminalGreen)
+                        BlinkingCursor()
                     }
                 }
 
@@ -113,10 +101,7 @@ fun FeedScreenContent(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = state.message,
-                            color = MaterialTheme.colorScheme.error
-                        )
+                        Text(state.message, color = TextPrimary)
                     }
                 }
 
@@ -126,21 +111,72 @@ fun FeedScreenContent(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "// no items",
-                                color = TextSecondary
-                            )
+                            Text("// no items", color = TextSecondary)
                         }
                     } else {
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(vertical = 8.dp)
+                        ) {
                             items(state.items, key = { it.id }) { item ->
-                                ItemCard(
+                                ItemWireRow(
                                     item = item,
                                     onClick = { onItemClick(item.id) }
                                 )
+                                Spacer(modifier = Modifier.height(8.dp))
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // ── FAB [+] ──
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(horizontal = 16.dp,
+                    vertical = 32.dp)
+        ) {
+            WireFab(onClick = onCreateItem)
+        }
+    }
+}
+
+@Composable
+fun ItemWireRow(item: Item, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            drawLine(LineColor, Offset(0f, 0f), Offset(w, 0f), Wire)
+            drawLine(LineColor, Offset(0f, h), Offset(w, h), Wire)
+            drawLine(LineColor, Offset(10f, h / 2 - 8f), Offset(10f, h / 2 + 8f), Accent)
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = 24.dp, end = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.name.lowercase(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextPrimary
+                )
+                if (item.description.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = item.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
                 }
             }
         }
@@ -148,37 +184,64 @@ fun FeedScreenContent(
 }
 
 @Composable
-fun ItemCard(item: Item, onClick: () -> Unit) {
-    OutlinedCard(
+fun WireFab(onClick: () -> Unit) {
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .size(56.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(0.dp),
-        colors = androidx.compose.material3.CardDefaults.outlinedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        contentAlignment = Alignment.Center
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = item.name.lowercase(),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawRect(
+                color = LineColor,
+                topLeft = Offset.Zero,
+                size = size,
+                style = Stroke(width = Wire)
             )
-            if (item.description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = item.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
-                )
-            }
         }
+        Text(
+            text = "[+]",
+            color = TerminalGreen,
+            style = MaterialTheme.typography.titleMedium
+        )
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true, device = "id:pixel_5")
+@Composable
+fun HorizontalLine(
+    modifier: Modifier = Modifier,
+    color: Color = LineColor,
+    strokeWidth: Float = Wire
+) {
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(2.dp)
+    ) {
+        drawLine(
+            color = color,
+            start = Offset(0f, size.height / 2),
+            end = Offset(size.width, size.height / 2),
+            strokeWidth = strokeWidth
+        )
+    }
+}
+
+@Composable
+fun BlinkingCursor() {
+    Text(
+        text = "█",
+        color = TerminalGreen,
+        style = MaterialTheme.typography.displayLarge
+    )
+}
+
+@Preview(
+    showBackground = true,
+    showSystemUi = true,
+    device = "id:pixel_5",
+    backgroundColor = 0xFF000000
+)
 @Composable
 fun FeedScreenPreview() {
     CodeboxTheme {
@@ -186,11 +249,13 @@ fun FeedScreenPreview() {
             uiState = FeedUiState.Success(
                 listOf(
                     Item(name = "kotlin", description = "jvm language"),
-                    Item(name = "rust", description = "systems language")
+                    Item(name = "rust", description = "systems language"),
+                    Item(name = "go", description = "")
                 )
             ),
             onCreateItem = {},
-            onItemClick = {}
+            onItemClick = {},
+            onProfileClick = {}
         )
     }
 }

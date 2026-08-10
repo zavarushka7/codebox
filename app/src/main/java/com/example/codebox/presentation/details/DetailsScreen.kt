@@ -1,47 +1,36 @@
 package com.example.codebox.presentation.detail
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.codebox.domain.Item
+import com.example.codebox.domain.UserReview
 import com.example.codebox.presentation.details.DetailViewModel
-import com.example.codebox.presentation.theme.GoldStar
-import com.example.codebox.presentation.theme.TerminalGreen
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.codebox.presentation.theme.CodeboxTheme
-import com.example.codebox.presentation.theme.TerminalGreenBorder
-import com.example.codebox.presentation.theme.TerminalGreenDark
-import com.example.codebox.presentation.theme.TextMuted
-import com.example.codebox.presentation.theme.TextSecondary
+import com.example.codebox.presentation.theme.*
+
+private val Hairline = 2.5f
+private val Wire = 1.5f
+private val Accent = 2f
+private val LineColor = Color(0xFF777777)
 
 @Composable
 fun DetailScreen(
@@ -56,42 +45,104 @@ fun DetailScreen(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator(color = TerminalGreen)
+            BlinkingCursor()
         }
         return
     }
 
+    DetailScreenContent(
+        item = item!!,
+        review = review,
+        onCommentChange = viewModel::onCommentChange,
+        onRatingChange = viewModel::onRatingChange,
+        onSaveReview = {
+            viewModel.saveReview()
+            onBack()
+        },
+        onBack = onBack
+    )
+}
+
+@Composable
+fun DetailScreenContent(
+    item: Item,
+    review: UserReview,
+    onCommentChange: (String) -> Unit,
+    onRatingChange: (Int) -> Unit,
+    onSaveReview: () -> Unit,
+    onBack: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(PureBlack)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(horizontal = 16.dp)
     ) {
-        // ── Общие данные (только для чтения) ──
+        // ── Шапка ──
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 32.dp, bottom = 12.dp)
+        ) {
+            Text(
+                text = "< назад",
+                color = TerminalGreen,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .clickable { onBack() }
+            )
+            Text(
+                text = "// detail",
+                style = MaterialTheme.typography.titleLarge,
+                color = TextPrimary,
+                modifier = Modifier.align(Alignment.Center)
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+            HorizontalLine(
+                modifier = Modifier.align(Alignment.BottomCenter),
+                strokeWidth = Hairline
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Row(
             verticalAlignment = Alignment.Top,
             modifier = Modifier.fillMaxWidth()
         ) {
-            AsyncImage(
-                model = item!!.imageUrl ?: "https://via.placeholder.com/120",
-                contentDescription = item!!.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.size(100.dp)
-            )
+            Box(
+                modifier = Modifier.size(100.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    drawRect(
+                        color = LineColor,
+                        topLeft = Offset.Zero,
+                        size = size,
+                        style = Stroke(width = Wire)
+                    )
+                }
+                AsyncImage(
+                    model = item.imageUrl ?: "https://via.placeholder.com/120",
+                    contentDescription = item.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = item!!.name.lowercase(),
+                    text = item.name.lowercase(),
                     style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = TextPrimary
                 )
-
-                if (item!!.description.isNotBlank()) {
+                if (item.description.isNotBlank()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = item!!.description,
+                        text = item.description,
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary
                     )
@@ -99,12 +150,10 @@ fun DetailScreen(
             }
         }
 
-        Divider(
-            color = MaterialTheme.colorScheme.outline,
-            modifier = Modifier.padding(vertical = 16.dp)
-        )
+        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalLine(strokeWidth = Hairline)
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // ── Личный комментарий (редактируемый) ──
         Text(
             text = "// my_comment: String?",
             style = MaterialTheme.typography.labelSmall,
@@ -113,21 +162,22 @@ fun DetailScreen(
         Spacer(modifier = Modifier.height(4.dp))
         OutlinedTextField(
             value = review.comment,
-            onValueChange = viewModel::onCommentChange,
+            onValueChange = onCommentChange,
             minLines = 3,
             shape = RoundedCornerShape(0.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = TerminalGreen,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                focusedContainerColor = MaterialTheme.colorScheme.background,
-                unfocusedContainerColor = MaterialTheme.colorScheme.background
+                unfocusedBorderColor = LineColor,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedTextColor = TextPrimary,
+                unfocusedTextColor = TextPrimary
             ),
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ── Личная оценка (кликабельные звёзды) ──
         Text(
             text = "// my_rating: Int (1..5)",
             style = MaterialTheme.typography.labelSmall,
@@ -139,10 +189,10 @@ fun DetailScreen(
                 Text(
                     text = if (star <= review.rating) "★" else "☆",
                     fontSize = 32.sp,
-                    color = if (star <= review.rating) GoldStar else TextMuted,
+                    color = if (star <= review.rating) TerminalGreen else TextMuted,
                     modifier = Modifier
                         .padding(end = 8.dp)
-                        .clickable { viewModel.onRatingChange(star) }
+                        .clickable { onRatingChange(star) }
                 )
             }
             Text(
@@ -154,36 +204,108 @@ fun DetailScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ── Сохранить личный отзыв ──
-        Button(
-            onClick = {
-                viewModel.saveReview()
-                onBack()
-            },
-            shape = RoundedCornerShape(0.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = TerminalGreenDark,
-                contentColor = TerminalGreen
-            ),
-            border = BorderStroke(1.dp, TerminalGreenBorder),
+        WireButton(
+            text = "save_my_review()",
+            onClick = onSaveReview,
+            isAccent = true,
             modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("save_my_review()")
-        }
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Button(
+        WireButton(
+            text = "navigateBack()",
             onClick = onBack,
-            shape = RoundedCornerShape(0.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface
-            ),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("navigateBack()")
+        )
+    }
+}
+
+@Composable
+fun HorizontalLine(
+    modifier: Modifier = Modifier,
+    color: Color = LineColor,
+    strokeWidth: Float = Wire
+) {
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(2.dp)
+    ) {
+        drawLine(
+            color = color,
+            start = Offset(0f, size.height / 2),
+            end = Offset(size.width, size.height / 2),
+            strokeWidth = strokeWidth
+        )
+    }
+}
+
+@Composable
+fun WireButton(
+    text: String,
+    onClick: () -> Unit,
+    isAccent: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawRect(
+                color = if (isAccent) TerminalGreen else LineColor,
+                topLeft = Offset.Zero,
+                size = size,
+                style = Stroke(width = if (isAccent) Accent else Wire)
+            )
         }
+        Text(
+            text = text,
+            color = if (isAccent) TerminalGreen else TextPrimary,
+            style = MaterialTheme.typography.labelLarge
+        )
+    }
+}
+
+@Composable
+fun BlinkingCursor() {
+    Text(
+        text = "█",
+        color = TerminalGreen,
+        style = MaterialTheme.typography.displayLarge
+    )
+}
+
+@Preview(
+    showBackground = true,
+    showSystemUi = true,
+    device = "id:pixel_5",
+    backgroundColor = 0xFF000000
+)
+@Composable
+fun DetailScreenPreview() {
+    CodeboxTheme {
+        DetailScreenContent(
+            item = Item(
+                id = "1",
+                name = "kotlin",
+                description = "statically typed programming language",
+                imageUrl = null
+            ),
+            review = UserReview(
+                userId = "u1",
+                itemId = "1",
+                comment = "отличный язык",
+                rating = 4
+            ),
+            onCommentChange = {},
+            onRatingChange = {},
+            onSaveReview = {},
+            onBack = {}
+        )
     }
 }
