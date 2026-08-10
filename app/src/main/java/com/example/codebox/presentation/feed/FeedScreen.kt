@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -38,13 +39,15 @@ import com.example.codebox.presentation.theme.TextSecondary
 fun FeedScreen(
     onCreateItem: () -> Unit,
     onItemClick: (String) -> Unit,
+    onProfileClick: () -> Unit,
     viewModel: FeedViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     FeedScreenContent(
         uiState = uiState,
         onCreateItem = onCreateItem,
-        onItemClick = onItemClick
+        onItemClick = onItemClick,
+        onProfileClick = onProfileClick
     )
 }
 
@@ -52,9 +55,29 @@ fun FeedScreen(
 fun FeedScreenContent(
     uiState: FeedUiState,
     onCreateItem: () -> Unit,
-    onItemClick: (String) -> Unit
+    onItemClick: (String) -> Unit,
+    onProfileClick: () -> Unit = {}
 ) {
     Scaffold(
+        topBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Text(
+                    text = "// codebox",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                )
+                TextButton(
+                    onClick = onProfileClick,
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                ) {
+                    Text("[ профиль ]", color = TerminalGreen)
+                }
+            }
+        },
         floatingActionButton = {
             Button(
                 onClick = onCreateItem,
