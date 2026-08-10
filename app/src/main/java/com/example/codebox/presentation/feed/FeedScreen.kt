@@ -1,11 +1,9 @@
 package com.example.codebox.presentation.feed
 
-import android.R.style
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,17 +29,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.codebox.domain.Item
 import com.example.codebox.presentation.theme.CodeboxTheme
-import com.example.codebox.presentation.theme.GoldStar
 import com.example.codebox.presentation.theme.TerminalGreen
 import com.example.codebox.presentation.theme.TerminalGreenBorder
 import com.example.codebox.presentation.theme.TerminalGreenDark
-import com.example.codebox.presentation.theme.TextMuted
 import com.example.codebox.presentation.theme.TextSecondary
 
-
-/* ═══════════════════════════════════════
-   Stateful wrapper — используется в приложении
-   ═══════════════════════════════════════ */
 @Composable
 fun FeedScreen(
     onCreateItem: () -> Unit,
@@ -56,10 +48,6 @@ fun FeedScreen(
     )
 }
 
-/* ═══════════════════════════════════════
-   Stateless content — сюда приходят данные,
-   отсюда рисуется всё на экране
-   ═══════════════════════════════════════ */
 @Composable
 fun FeedScreenContent(
     uiState: FeedUiState,
@@ -123,8 +111,10 @@ fun FeedScreenContent(
                     } else {
                         LazyColumn(modifier = Modifier.fillMaxSize()) {
                             items(state.items, key = { it.id }) { item ->
-                                ItemCard(item = item,
-                                    onClick = { onItemClick(item.id)})
+                                ItemCard(
+                                    item = item,
+                                    onClick = { onItemClick(item.id) }
+                                )
                             }
                         }
                     }
@@ -135,16 +125,12 @@ fun FeedScreenContent(
 }
 
 @Composable
-fun ItemCard(
-    item: Item,
-    onClick: () -> Unit
-
-) {
+fun ItemCard(item: Item, onClick: () -> Unit) {
     OutlinedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick()}
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(0.dp),
         colors = androidx.compose.material3.CardDefaults.outlinedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -157,53 +143,27 @@ fun ItemCard(
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            if (item.description?.isNotBlank() == true){
+            if (item.description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = item.description,
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary
-
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "★".repeat(item.rating.coerceIn(0, 5)),
-                    color = GoldStar
-                )
-                Text(
-                    text = "★".repeat((5 - item.rating).coerceIn(0, 5)),
-                    color = TextMuted
-                )
-                Text(
-                    text = "  ${item.rating}/5",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextMuted
                 )
             }
         }
     }
 }
 
-/* ═══════════════════════════════════════
-   ОДНО PREVIEW для всего экрана
-   ═══════════════════════════════════════ */
-@Preview(
-    showBackground = true,
-    showSystemUi = true,           // показывает статус-бар и системные панели
-    device = "id:pixel_5"          // размер как на Pixel 5
-)
+@Preview(showBackground = true, showSystemUi = true, device = "id:pixel_5")
 @Composable
-fun FeedScreenFullPreview() {
+fun FeedScreenPreview() {
     CodeboxTheme {
         FeedScreenContent(
             uiState = FeedUiState.Success(
                 listOf(
-                    Item(name = "kotlin", rating = 5, description = "jvm"),
-                    Item(name = "python", rating = 4, description = "dynamic"),
-                    Item(name = "rust", rating = 5, description = "systems"),
-                    Item(name = "javascript", rating = 3, description = "web"),
-                    Item(name = "docker", rating = 4, description = "containers")
+                    Item(name = "kotlin", description = "jvm language"),
+                    Item(name = "rust", description = "systems language")
                 )
             ),
             onCreateItem = {},
