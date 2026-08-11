@@ -42,4 +42,8 @@ class UserReviewRepository @Inject constructor(
                 )
             }
     }
+
+    suspend fun deleteReview(userId: String, itemId: String){
+        doc(userId, itemId).delete().await()
+    }
 }

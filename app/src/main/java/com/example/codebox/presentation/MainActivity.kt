@@ -16,10 +16,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.codebox.presentation.auth.LoginScreen
 import com.example.codebox.presentation.create_item.CreateItemScreen
-import com.example.codebox.presentation.detail.DetailScreen
+import com.example.codebox.presentation.details.DetailScreen
 import com.example.codebox.presentation.feed.FeedScreen
 import com.example.codebox.presentation.feed.FeedViewModel
 import com.example.codebox.presentation.profile.ProfileScreen
+import com.example.codebox.presentation.settings.SettingsScreen
 import com.example.codebox.presentation.theme.CodeboxTheme
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
@@ -78,7 +79,19 @@ class MainActivity : ComponentActivity() {
                         composable("profile") {
                             ProfileScreen(
                                 onBack = { navController.popBackStack() },
-                                onSignedOut = { isLoggedIn = false } // ← разлогинивает и вернёт на экран входа
+                                onSignedOut = { isLoggedIn = false },
+                                onReviewClick = { itemId ->
+                                    navController.navigate("detail/$itemId")
+                                },
+                                onSettingsClick = {
+                                    navController.navigate("settings")
+                                },
+
+                            )
+                        }
+                        composable("settings") {
+                            SettingsScreen(
+                                onBack = { navController.popBackStack() },
                             )
                         }
                     }

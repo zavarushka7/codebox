@@ -1,4 +1,4 @@
-package com.example.codebox.presentation.detail
+package com.example.codebox.presentation.details
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -24,7 +25,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.codebox.domain.Item
 import com.example.codebox.domain.UserReview
-import com.example.codebox.presentation.details.DetailViewModel
+import com.example.codebox.presentation.auth.HorizontalLine
+
 import com.example.codebox.presentation.theme.*
 
 private val Hairline = 2.5f
@@ -79,30 +81,33 @@ fun DetailScreenContent(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
     ) {
-        // ── Шапка ──
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 32.dp, bottom = 12.dp)
         ) {
-            Text(
-                text = "< назад",
-                color = TerminalGreen,
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .clickable { onBack() }
-            )
-            Text(
-                text = "// detail",
-                style = MaterialTheme.typography.titleLarge,
-                color = TextPrimary,
-                modifier = Modifier.align(Alignment.Center)
-            )
-            Spacer(modifier = Modifier.height(32.dp))
-            HorizontalLine(
-                modifier = Modifier.align(Alignment.BottomCenter),
-                strokeWidth = Hairline
-            )
+            // Верхний ряд
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "< назад",
+                    color = TerminalGreen,
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .clickable { onBack() }
+                )
+                Text(
+                    text = "// переменная",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = TextPrimary,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+                // иконка справа если нужна
+            }
+
+            // ← отступ между текстом и линией
+            Spacer(modifier = Modifier.height(8.dp))
+
+            HorizontalLine(strokeWidth = Hairline)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -221,25 +226,7 @@ fun DetailScreenContent(
     }
 }
 
-@Composable
-fun HorizontalLine(
-    modifier: Modifier = Modifier,
-    color: Color = LineColor,
-    strokeWidth: Float = Wire
-) {
-    Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(2.dp)
-    ) {
-        drawLine(
-            color = color,
-            start = Offset(0f, size.height / 2),
-            end = Offset(size.width, size.height / 2),
-            strokeWidth = strokeWidth
-        )
-    }
-}
+
 
 @Composable
 fun WireButton(

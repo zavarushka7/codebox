@@ -22,9 +22,7 @@ class ProfileViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<ProfileUiState>(ProfileUiState.Loading)
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
-    init {
-        loadProfile()
-    }
+
 
     fun loadProfile() {
         viewModelScope.launch {
@@ -60,5 +58,17 @@ class ProfileViewModel @Inject constructor(
 
     fun signOut() {
         Firebase.auth.signOut()
+    }
+
+    fun deleteReview(itemId: String){
+        viewModelScope.launch {
+            try {
+                val userId = Firebase.auth.currentUser?.uid ?: return@launch
+                userReviewRepository.deleteReview(userId, itemId)
+                loadProfile()
+            } catch (e: Exception){
+                _uiState.value = ProfileUiState.Error("Не удалось удалить: ${e.message}")
+            }
+        }
     }
 }

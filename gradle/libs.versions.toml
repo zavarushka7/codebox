@@ -7,9 +7,9 @@ coreKtx = "1.16.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
-lifecycleRuntimeKtx = "2.8.9"
+lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.10.1"
-composeBom = "2025.10.01"
+
 
 # Firebase
 firebaseBom = "33.12.0"
@@ -20,7 +20,7 @@ hiltNavigationCompose = "1.2.0"
 
 # Navigation & ViewModel
 navigationCompose = "2.8.9"
-lifecycleViewmodelCompose = "2.8.9"
+
 
 # Image Loading
 coil = "2.7.0"
@@ -30,8 +30,15 @@ vico = "2.1.2"
 
 # Coroutines
 coroutines = "1.10.2"
-ui = "1.11.4"
-foundationLayout = "1.11.4"
+
+
+composeBom = "2024.12.01"
+lifecycleViewmodelCompose = "2.8.7"
+lifecycleViewmodelKtx = "2.8.7"
+ui = "1.7.5"
+foundationLayout = "1.7.5"
+foundation = "1.7.5"
+uiVersion = "1.11.4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -76,6 +83,9 @@ vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.
 kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
 androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
+androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewmodelKtx" }
+androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
+ui = { group = "androidx.compose.ui", name = "ui", version.ref = "uiVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

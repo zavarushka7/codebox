@@ -17,3 +17,4 @@ val TextMuted      = Color(0xFF555555)   // метки
 val TerminalGreen       = Color(0xFF7EE787)
 val TerminalGreenDark   = Color.Transparent   // кнопки без заливки
 val TerminalGreenBorder = Color(0xFF7EE787)     // обводка акцента
+val StarEmpty = Color(0xFF345E38)  // или 0xFF2A2A2A

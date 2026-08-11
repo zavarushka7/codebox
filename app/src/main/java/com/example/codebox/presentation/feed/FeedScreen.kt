@@ -60,31 +60,34 @@ fun FeedScreenContent(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            // ── Шапка ──
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 32.dp, bottom = 12.dp)
             ) {
-                Text(
-                    text = "// codebox",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = TextPrimary,
-                    modifier = Modifier.align(Alignment.CenterStart)
-                )
-                Text(
-                    text = "[ профиль ]",
-                    color = TerminalGreen,
+                Box(
                     modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .clickable { onProfileClick() }
-                )
-                Spacer(modifier = Modifier.height(32.dp))
-                HorizontalLine(
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                    strokeWidth = Hairline
-                )
+                        .fillMaxWidth()
+                ) {
+                    Text(
+                        text = "// codebox",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = TextPrimary,
+                        modifier = Modifier.align(Alignment.CenterStart)
+                    )
+                    Text(
+                        text = "[ профиль ]",
+                        color = TerminalGreen,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .clickable { onProfileClick() }
+                    )
+
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalLine(strokeWidth = Hairline)
             }
+
 
             when (val state = uiState) {
                 is FeedUiState.Loading -> {

@@ -60,21 +60,23 @@ fun LoginScreenContent(
             .background(PureBlack)
             .padding(horizontal = 16.dp)
     ) {
-        Box(
+        // ── Шапка ──
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 32.dp, bottom = 12.dp)
         ) {
-            Text(
-                text = "// codebox auth",
-                style = MaterialTheme.typography.titleLarge,
-                color = TextPrimary,
-                modifier = Modifier.align(Alignment.CenterStart)
-            )
-            HorizontalLine(
-                modifier = Modifier.align(Alignment.BottomCenter),
-                strokeWidth = Hairline
-            )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "// codebox auth",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = TextPrimary,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalLine(strokeWidth = Hairline)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
