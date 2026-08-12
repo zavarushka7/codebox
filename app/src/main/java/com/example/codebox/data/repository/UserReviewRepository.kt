@@ -1,5 +1,6 @@
 package com.example.codebox.data.repository
 
+import com.example.codebox.domain.ReviewWithAuthor
 import com.example.codebox.domain.UserReview
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
@@ -45,5 +46,34 @@ class UserReviewRepository @Inject constructor(
 
     suspend fun deleteReview(userId: String, itemId: String){
         doc(userId, itemId).delete().await()
+    }
+
+    suspend fun getReviewsForItem(itemId: String): List<ReviewWithAuthor>{
+        val snapshot = firestore.collection("user_reviews")
+            .whereEqualTo("itemId", itemId)
+            .get()
+            .await()
+
+        if (snapshot.isEmpty) return emptyList()
+        return snapshot.documents.mapNotNull { doc ->
+            val userId = doc.getString("userId") ?: return@mapNotNull null
+            val review = UserReview(
+                userId = userId,
+                itemId = doc.getString("itemId") ?: "",
+                comment = doc.getString("comment") ?: "",
+                rating = doc.getLong("rating")?.toInt() ?: 0
+            )
+            // подтягиваем nickname из users/{uid}
+            val userDoc = firestore.collection("users").document(userId).get().await()
+            val nickname = userDoc.getString("nickname") ?: userId.take(6)
+
+            ReviewWithAuthor(
+                userId = review.userId,
+                itemId = review.itemId,
+                comment = review.comment,
+                rating = review.rating,
+                authorName = nickname
+            )
+        }
     }
 }

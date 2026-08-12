@@ -35,15 +35,4 @@ class FeedViewModel @Inject constructor(
     }
 
 
-    fun addItem(item: Item){
-        // viewModelScope - корутины, привязанные к жизни ViewModel. Если ViewModel уничтожен (например, поворот экрана), корутина отменится
-        viewModelScope.launch {
-            try {
-                repository.addItem(item)
-            } catch (e: Exception){
-                _uiState.value = FeedUiState.Error("Не удалось сохранить: ${e.message}")
-            }
-
-        }
-    }
 }

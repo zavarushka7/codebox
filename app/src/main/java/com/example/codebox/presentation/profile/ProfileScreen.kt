@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +25,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -30,7 +35,13 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import com.example.codebox.domain.ReviewWithItem
 import com.example.codebox.domain.UserReview
+import com.example.codebox.presentation.components.AvatarImage
+import com.example.codebox.presentation.feed.HorizontalLine
+
+import com.example.codebox.presentation.feed.WireBottomBar
 import com.example.codebox.presentation.theme.*
 
 private val Hairline = 2.5f
@@ -42,11 +53,11 @@ private val StarEmpty = Color(0xFF333333)
 
 @Composable
 fun ProfileScreen(
-    onBack: () -> Unit,
-    onSignedOut: () -> Unit,
     onReviewClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
-    viewModel: ProfileViewModel = hiltViewModel()
+    viewModel: ProfileViewModel = hiltViewModel(),
+    onFeedClick: () -> Unit,
+    onSearchClick: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showDeleteConfirm by remember { mutableStateOf<ReviewWithItem?>(null)}
@@ -56,14 +67,12 @@ fun ProfileScreen(
     }
     ProfileScreenContent(
         uiState = uiState,
-        onBack = onBack,
-        onSignOut = {
-            viewModel.signOut()
-            onSignedOut()
-        },
+
         onReviewClick = onReviewClick,
         onShowDeleteConfirm = { showDeleteConfirm = it},
-        onSettingsClick = onSettingsClick
+        onSettingsClick = onSettingsClick,
+        onFeedClick = onFeedClick,
+    onSearchClick = onSearchClick,
     )
     if (showDeleteConfirm != null){
         DeleteConfirmDialog(
@@ -80,88 +89,153 @@ fun ProfileScreen(
 @Composable
 fun ProfileScreenContent(
     uiState: ProfileUiState,
-    onBack: () -> Unit,
-    onSignOut: () -> Unit,
+
     onReviewClick: (String) -> Unit,
     onShowDeleteConfirm: (ReviewWithItem) -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onFeedClick: () -> Unit,
+    onSearchClick: () -> Unit,
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(PureBlack)
-            .padding(horizontal = 20.dp)
     ) {
-
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 32.dp, bottom = 12.dp)
+                .fillMaxSize()
+
+                .padding(horizontal = 16.dp)
         ) {
-            // Верхний ряд
-            Box(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "< назад",
-                    color = TerminalGreen,
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .clickable { onBack() }
-                )
-                Text(
-                    text = "// профиль",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = TextPrimary,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-                Icon(
-                    imageVector = Icons.Outlined.Settings,
-                    contentDescription = "настройки",
-                    tint = TextSecondary,
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .size(24.dp)
-                        .clickable { onSettingsClick() }
-                )
-            }
 
-            // ← отступ между текстом и линией
-            Spacer(modifier = Modifier.height(8.dp))
-
-            HorizontalLine(strokeWidth = Hairline)
-        }
-
-        when (val state = uiState) {
-            is ProfileUiState.Loading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    BlinkingCursor()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 32.dp, bottom = 12.dp)
+            ) {
+                // Верхний ряд
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "// профиль",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = TextPrimary,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                    Icon(
+                        imageVector = Icons.Outlined.Settings,
+                        contentDescription = "настройки",
+                        tint = TextSecondary,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .size(24.dp)
+                            .clickable { onSettingsClick() }
+                    )
                 }
-            }
 
-            is ProfileUiState.Error -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("// error", color = TextMuted, style = MaterialTheme.typography.titleMedium)
-                        Text(state.message, color = TextPrimary, style = MaterialTheme.typography.bodyLarge)
+                // ← отступ между текстом и линией
+                Spacer(modifier = Modifier.height(8.dp))
+
+                HorizontalLine(strokeWidth = Hairline)
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                when (val state = uiState) {
+                    is ProfileUiState.Loading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            BlinkingCursor()
+                        }
+                    }
+
+                    is ProfileUiState.Error -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    "// error",
+                                    color = TextMuted,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    state.message,
+                                    color = TextPrimary,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                        }
+                    }
+
+                    is ProfileUiState.Success -> {
+                        ProfileBody(
+                            state = state,
+                            onReviewClick = onReviewClick,
+                            onShowDeleteConfirm = onShowDeleteConfirm
+                        )
                     }
                 }
-            }
 
-            is ProfileUiState.Success -> {
-                ProfileBody(
-                    state = state,
-                    onSignOut = onSignOut,
-                    onReviewClick = onReviewClick,
-                    onShowDeleteConfirm = onShowDeleteConfirm
-                )
             }
+            WireBottomBar(
+                    currentTab = "profile",
+            onFeed = onFeedClick,
+            onSearch = onSearchClick,
+            onProfile = {}
+            )
         }
     }
+}
+@Composable
+fun WireBottomBar(
+    currentTab: String,
+    onFeed: () -> Unit,
+    onSearch: () -> Unit,
+    onProfile: () -> Unit
+) {
+    Column {
+        HorizontalLine()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(78.dp)
+                .background(PureBlack),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            BottomNavIcon(icon = Icons.Outlined.Home,
+                label = "feed",
+
+                selected = currentTab == "feed",
+                onClick = onFeed)
+            BottomNavIcon(icon = Icons.Outlined.Search,
+                label = "search",
+                selected = currentTab == "search",
+                onClick = onSearch)
+            BottomNavIcon(icon = Icons.Outlined.Person,
+                label = "profile",
+                selected = currentTab == "profile",
+                onClick = onProfile)
+
+        }
+    }
+}
+@Composable
+private fun BottomNavIcon(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Icon(
+        imageVector = icon,
+        contentDescription = label,
+        tint = if (selected) TerminalGreen else TextSecondary,
+        modifier = Modifier
+            .size(24.dp)
+            .clickable(onClick = onClick)
+    )
 }
 @Composable
 fun DeleteConfirmDialog(
@@ -246,7 +320,7 @@ fun DeleteConfirmDialog(
 @Composable
 private fun ProfileBody(
     state: ProfileUiState.Success,
-    onSignOut: () -> Unit,
+
     onReviewClick: (String) -> Unit,
     onShowDeleteConfirm: (ReviewWithItem) -> Unit
 ) {
@@ -263,11 +337,12 @@ private fun ProfileBody(
             horizontalArrangement = Arrangement.Start
         ){
             Column(){
-                WireAvatar(
-                    initial = state.nickname.firstOrNull()?.uppercase() ?: "?",
+                // В ProfileBody, вместо if/else с AsyncImage:
+                AvatarImage(
+                    avatarData = state.avatarUrl,
+                    nickname = state.nickname,
                     modifier = Modifier.size(100.dp)
                 )
-
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
@@ -280,6 +355,12 @@ private fun ProfileBody(
                     text = state.email,
                     style = MaterialTheme.typography.bodyLarge,
                     color = TextSecondary
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    text = state.description,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextPrimary
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -326,13 +407,7 @@ private fun ProfileBody(
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
 
-        WireButton(
-            text = "[ выйти из аккаунта ]",
-            onClick = onSignOut,
-            modifier = Modifier.padding(bottom = 20.dp)
-        )
     }
 }
 
@@ -351,17 +426,19 @@ fun ReviewWireRow(
             .wrapContentHeight()
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
-            val w = size.width
-            val h = size.height
-            drawLine(LineColor, Offset(0f, 0f), Offset(w, 0f), Wire)
-            drawLine(LineColor, Offset(0f, h), Offset(w, h), Wire)
-            // ← вертикальная палка убрана
+            drawRect(
+                color = LineColor,
+                topLeft = Offset.Zero,
+                size = size,
+                style = Stroke(width = Wire)
+            )
         }
+
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 16.dp, bottom = 16.dp)
+                .padding(top = 16.dp, bottom = 16.dp, start = 24.dp, end = 12.dp)
         ) {
             Text(
                 text = rw.itemName,
@@ -392,7 +469,7 @@ fun ReviewWireRow(
                     text = rw.review.comment,
                     color = TextSecondary,
                     style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 2,
+                    maxLines = if (expanded) Int.MAX_VALUE else 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -581,13 +658,17 @@ fun ProfileScreenPreview() {
                         ),
                         itemName = "go"
                     )
-                )
+                ),
+                avatarUrl = "",
+                description = "описание"
             ),
-            onBack = {},
-            onSignOut = {},
+
+
             onReviewClick = {},
             onShowDeleteConfirm = {},
-            onSettingsClick = {}
+            onSettingsClick = {},
+            onSearchClick = {},
+            onFeedClick = {}
         )
     }
 }

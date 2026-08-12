@@ -17,10 +17,10 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class DetailViewModel @Inject constructor(
+class ReviewFormViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     private val itemRepository: ItemRepository,
     private val userReviewRepository: UserReviewRepository,
-    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val itemId: String = checkNotNull(savedStateHandle["itemId"])
@@ -32,14 +32,14 @@ class DetailViewModel @Inject constructor(
     private val _review = MutableStateFlow(UserReview(userId = userId, itemId = itemId))
     val review: StateFlow<UserReview> = _review.asStateFlow()
 
+    private val _saved = MutableStateFlow(false)
+    val saved: StateFlow<Boolean> = _saved.asStateFlow()
+
     init {
         viewModelScope.launch {
             _item.value = itemRepository.getItemById(itemId)
-        }
-        viewModelScope.launch {
-            val existing = userReviewRepository.getReview(userId, itemId)
-            if (existing != null) {
-                _review.value = existing
+            userReviewRepository.getReview(userId, itemId)?.let {
+                _review.value = it
             }
         }
     }
@@ -55,6 +55,7 @@ class DetailViewModel @Inject constructor(
     fun saveReview() {
         viewModelScope.launch {
             userReviewRepository.saveReview(_review.value)
+            _saved.value = true
         }
     }
 }

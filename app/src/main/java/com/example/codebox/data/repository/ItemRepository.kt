@@ -24,6 +24,7 @@ class ItemRepository @Inject constructor(
                     Item(
                         id = doc.getString("id") ?: doc.id,
                         name = doc.getString("name") ?: "",
+                        type = doc.getString("type") ?: "",
                         imageUrl = doc.getString("imageUrl"),
                         description = doc.getString("description") ?: ""
                     )
@@ -46,6 +47,7 @@ class ItemRepository @Inject constructor(
             Item(
                 id = doc.getString("id") ?: doc.id,
                 name = doc.getString("name") ?: "",
+                type = doc.getString("type") ?: "",
                 imageUrl = doc.getString("imageUrl"),
                 description = doc.getString("description") ?: ""
             )

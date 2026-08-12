@@ -6,6 +6,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,16 +34,16 @@ private val LineColor = Color(0xFF777777)
 
 @Composable
 fun FeedScreen(
-    onCreateItem: () -> Unit,
     onItemClick: (String) -> Unit,
     onProfileClick: () -> Unit,
+    onSearchClick: () -> Unit,
     viewModel: FeedViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     FeedScreenContent(
         uiState = uiState,
-        onCreateItem = onCreateItem,
         onItemClick = onItemClick,
+        onSearchClick = onSearchClick,
         onProfileClick = onProfileClick
     )
 }
@@ -46,8 +51,8 @@ fun FeedScreen(
 @Composable
 fun FeedScreenContent(
     uiState: FeedUiState,
-    onCreateItem: () -> Unit,
     onItemClick: (String) -> Unit,
+    onSearchClick: () -> Unit = {},
     onProfileClick: () -> Unit = {}
 ) {
     Box(
@@ -60,92 +65,131 @@ fun FeedScreenContent(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
+            // ── Шапка ──
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 32.dp, bottom = 12.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                ) {
                     Text(
                         text = "// codebox",
                         style = MaterialTheme.typography.titleLarge,
                         color = TextPrimary,
-                        modifier = Modifier.align(Alignment.CenterStart)
-                    )
-                    Text(
-                        text = "[ профиль ]",
-                        color = TerminalGreen,
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .clickable { onProfileClick() }
+
                     )
 
-                }
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalLine(strokeWidth = Hairline)
             }
 
-
-            when (val state = uiState) {
-                is FeedUiState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        BlinkingCursor()
-                    }
-                }
-
-                is FeedUiState.Error -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(state.message, color = TextPrimary)
-                    }
-                }
-
-                is FeedUiState.Success -> {
-                    if (state.items.isEmpty()) {
+            // ── Контент (занимает всё место между шапкой и панелью) ──
+            Box(modifier = Modifier.weight(1f)) {
+                when (val state = uiState) {
+                    is FeedUiState.Loading -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("// no items", color = TextSecondary)
+                            BlinkingCursor()
                         }
-                    } else {
-                        LazyColumn(
+                    }
+
+                    is FeedUiState.Error -> {
+                        Box(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(vertical = 8.dp)
+                            contentAlignment = Alignment.Center
                         ) {
-                            items(state.items, key = { it.id }) { item ->
-                                ItemWireRow(
-                                    item = item,
-                                    onClick = { onItemClick(item.id) }
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
+                            Text(state.message, color = TextPrimary)
+                        }
+                    }
+
+                    is FeedUiState.Success -> {
+                        if (state.items.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("// no items", color = TextSecondary)
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(vertical = 8.dp)
+                            ) {
+                                items(state.items, key = { it.id }) { item ->
+                                    ItemWireRow(
+                                        item = item,
+                                        onClick = { onItemClick(item.id) }
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        // ── FAB [+] ──
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(horizontal = 16.dp,
-                    vertical = 32.dp)
-        ) {
-            WireFab(onClick = onCreateItem)
+            // ── Нижняя панель (прижата к низу) ──
+            WireBottomBar(
+                currentTab = "feed",
+                onFeed = {},
+                onSearch = onSearchClick,
+                onProfile = onProfileClick
+            )
         }
     }
 }
 
+@Composable
+fun WireBottomBar(
+    currentTab: String,
+    onFeed: () -> Unit,
+    onSearch: () -> Unit,
+    onProfile: () -> Unit
+) {
+    Column {
+        HorizontalLine()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(78.dp)
+                .background(PureBlack),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            BottomNavIcon(icon = Icons.Outlined.Home,
+                label = "feed",
+
+                selected = currentTab == "feed",
+                onClick = onFeed)
+            BottomNavIcon(icon = Icons.Outlined.Search,
+                label = "search",
+                selected = currentTab == "search",
+                onClick = onSearch)
+            BottomNavIcon(icon = Icons.Outlined.Person,
+                label = "profile",
+                selected = currentTab == "profile",
+                onClick = onProfile)
+
+        }
+    }
+}
+@Composable
+private fun BottomNavIcon(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Icon(
+        imageVector = icon,
+        contentDescription = label,
+        tint = if (selected) TerminalGreen else TextSecondary,
+        modifier = Modifier
+            .size(24.dp)
+            .clickable(onClick = onClick)
+    )
+}
 @Composable
 fun ItemWireRow(item: Item, onClick: () -> Unit) {
     Box(
@@ -154,13 +198,15 @@ fun ItemWireRow(item: Item, onClick: () -> Unit) {
             .height(64.dp)
             .clickable(onClick = onClick)
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-            drawLine(LineColor, Offset(0f, 0f), Offset(w, 0f), Wire)
-            drawLine(LineColor, Offset(0f, h), Offset(w, h), Wire)
-            drawLine(LineColor, Offset(10f, h / 2 - 8f), Offset(10f, h / 2 + 8f), Accent)
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawRect(
+                color = LineColor,
+                topLeft = Offset.Zero,
+                size = size,
+                style = Stroke(width = Wire)
+            )
         }
+
         Row(
             modifier = Modifier
                 .fillMaxSize()
@@ -186,29 +232,7 @@ fun ItemWireRow(item: Item, onClick: () -> Unit) {
     }
 }
 
-@Composable
-fun WireFab(onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(56.dp)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            drawRect(
-                color = LineColor,
-                topLeft = Offset.Zero,
-                size = size,
-                style = Stroke(width = Wire)
-            )
-        }
-        Text(
-            text = "[+]",
-            color = TerminalGreen,
-            style = MaterialTheme.typography.titleMedium
-        )
-    }
-}
+
 
 @Composable
 fun HorizontalLine(
@@ -256,9 +280,10 @@ fun FeedScreenPreview() {
                     Item(name = "go", description = "")
                 )
             ),
-            onCreateItem = {},
+
             onItemClick = {},
-            onProfileClick = {}
+            onProfileClick = {},
+            onSearchClick = {}
         )
     }
 }

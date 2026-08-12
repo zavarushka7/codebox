@@ -15,8 +15,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.codebox.presentation.auth.LoginScreen
-import com.example.codebox.presentation.create_item.CreateItemScreen
 import com.example.codebox.presentation.details.DetailScreen
+import com.example.codebox.presentation.details.ReviewFormScreen
 import com.example.codebox.presentation.feed.FeedScreen
 import com.example.codebox.presentation.feed.FeedViewModel
 import com.example.codebox.presentation.profile.ProfileScreen
@@ -50,48 +50,49 @@ class MainActivity : ComponentActivity() {
                     ) {
                         composable("feed") {
                             FeedScreen(
-                                onCreateItem = {
-                                    navController.navigate("create")
-                                },
+
                                 onItemClick = { itemId ->
                                     navController.navigate("detail/$itemId")
                                 },
-                                onProfileClick = { navController.navigate("profile") }
+                                onProfileClick = { navController.navigate("profile")},
+                                onSearchClick = {}
                             )
                         }
 
-                        composable("create") {
-                            val parentEntry = remember { navController.getBackStackEntry("feed") }
-                            val feedViewModel: FeedViewModel = hiltViewModel(parentEntry)
-                            CreateItemScreen(
-                                onSaveItem = { newItem ->
-                                    feedViewModel.addItem(newItem)
-                                    navController.popBackStack()
-                                }
-                            )
-                        }
-
-                        composable("detail/{itemId}") {
+                        composable("detail/{itemId}") { backStackEntry ->
+                            val itemId = backStackEntry.arguments?.getString("itemId") ?: return@composable
                             DetailScreen(
+                                itemId = itemId,
+                                onBack = { navController.popBackStack() },
+                                onRateClick = { navController.navigate("review_form/$itemId") }
+                            )
+                        }
+                        composable("review_form/{itemId}") { backStackEntry ->
+                            val itemId = backStackEntry.arguments?.getString("itemId") ?: return@composable
+                            ReviewFormScreen(
+                                itemId = itemId,
                                 onBack = { navController.popBackStack() }
                             )
                         }
                         composable("profile") {
                             ProfileScreen(
-                                onBack = { navController.popBackStack() },
-                                onSignedOut = { isLoggedIn = false },
+
+
                                 onReviewClick = { itemId ->
                                     navController.navigate("detail/$itemId")
                                 },
                                 onSettingsClick = {
                                     navController.navigate("settings")
                                 },
+                                onFeedClick = { navController.navigate("feed")},
+                                onSearchClick = {}
 
                             )
                         }
                         composable("settings") {
                             SettingsScreen(
                                 onBack = { navController.popBackStack() },
+                                onSignedOut = { isLoggedIn = false },
                             )
                         }
                     }
