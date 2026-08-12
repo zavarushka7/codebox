@@ -47,11 +47,13 @@ fun SettingsScreen(
 
     SettingsScreenContent(
         nickname = viewModel.nickname.value,
+        description = viewModel.description.value,
         avatarUrl = viewModel.avatarUrl.value,
         error = viewModel.error.value,
         success = viewModel.success.value,
         isLoading = viewModel.isLoading.value,
         onNicknameChange = viewModel::onNicknameChange,
+        onDescriptionChange = viewModel::onDescriptionChange,
         onAvatarClick = { launcher.launch("image/*") },
         onSave = {
             viewModel.saveProfile()
@@ -68,11 +70,13 @@ fun SettingsScreen(
 @Composable
 fun SettingsScreenContent(
     nickname: String,
+    description: String,
     avatarUrl: String,
     error: String?,
     success: String?,
     isLoading: Boolean,
     onNicknameChange: (String) -> Unit,
+    onDescriptionChange: (String) -> Unit,
     onAvatarClick: () -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit,
@@ -167,20 +171,28 @@ fun SettingsScreenContent(
             modifier = Modifier.fillMaxWidth()
         )
 
-        if (error != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = error, color = TerminalGreen, style = MaterialTheme.typography.labelSmall)
-        }
-        if (success != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = success, color = TerminalGreen, style = MaterialTheme.typography.labelSmall)
-        }
-        if (isLoading) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                BlinkingCursor()
-            }
-        }
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "// description: String",
+            style = MaterialTheme.typography.labelSmall,
+            color = TextMuted
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        OutlinedTextField(
+            value = description,
+            onValueChange = onDescriptionChange,
+            singleLine = true,
+            shape = RoundedCornerShape(0.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = TerminalGreen,
+                unfocusedBorderColor = LineColor,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedTextColor = TextPrimary,
+                unfocusedTextColor = TextPrimary
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -235,7 +247,9 @@ fun SettingsScreenPreview() {
             onAvatarClick = {},
             onSave = {},
             onBack = {},
-            onSignOut = {}
+            onSignOut = {},
+            onDescriptionChange = {},
+            description = "описание"
         )
     }
 }

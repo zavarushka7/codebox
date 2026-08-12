@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -30,7 +31,10 @@ class SettingsViewModel @Inject constructor(
     private val _nickname = mutableStateOf("")
     val nickname: State<String> = _nickname
 
-    private val _avatarUrl = mutableStateOf("") // здесь либо URL, либо Base64
+    private val _description = mutableStateOf("")
+    val description: State<String> = _description
+
+    private val _avatarUrl = mutableStateOf("")
     val avatarUrl: State<String> = _avatarUrl
 
     private val _error = mutableStateOf<String?>(null)
@@ -48,7 +52,7 @@ class SettingsViewModel @Inject constructor(
                 try {
                     val doc = firestore.collection("users").document(uid).get().await()
                     _nickname.value = doc.getString("nickname") ?: user?.displayName ?: ""
-                    // сначала ищем avatarBase64, если нет — старый avatarUrl
+                    _description.value = doc.getString("description") ?: ""   // ← вот это
                     _avatarUrl.value = doc.getString("avatarBase64") ?: doc.getString("avatarUrl") ?: ""
                 } catch (_: Exception) {
                     _nickname.value = user?.displayName ?: ""
@@ -59,6 +63,12 @@ class SettingsViewModel @Inject constructor(
 
     fun onNicknameChange(value: String) {
         _nickname.value = value
+        _error.value = null
+        _success.value = null
+    }
+
+    fun onDescriptionChange(value: String) {
+        _description.value = value
         _error.value = null
         _success.value = null
     }
@@ -79,7 +89,6 @@ class SettingsViewModel @Inject constructor(
                 val bytes = stream.toByteArray()
                 val base64 = Base64.encodeToString(bytes, Base64.DEFAULT)
 
-                // лимит Firestore — 1 МБ на документ
                 if (base64.length > 900_000) {
                     _error.value = "изображение слишком большое"
                     _isLoading.value = false
@@ -112,11 +121,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
+                val data = hashMapOf(
+                    "nickname" to _nickname.value,
+                    "description" to _description.value   // ← сохраняем описание
+                )
                 firestore.collection("users").document(uid)
-                    .set(
-                        hashMapOf("nickname" to _nickname.value),
-                        com.google.firebase.firestore.SetOptions.merge()
-                    )
+                    .set(data, SetOptions.merge())
                     .await()
                 _success.value = "профиль обновлён"
             } catch (e: Exception) {
