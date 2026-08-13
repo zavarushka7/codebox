@@ -1,24 +1,23 @@
-package com.example.codebox.presentation.details
+package com.example.codebox.presentation.review_form
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -28,25 +27,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.codebox.domain.Item
 import com.example.codebox.domain.UserReview
 import com.example.codebox.presentation.theme.*
+import com.example.codebox.presentation.common.*
 
 private val Hairline = 2.5f
-private val Wire = 1.5f
-private val Accent = 2f
 private val LineColor = Color(0xFF777777)
 
 @Composable
 fun ReviewFormScreen(
-    itemId: String,
     onBack: () -> Unit,
     viewModel: ReviewFormViewModel = hiltViewModel()
 ) {
     val item by viewModel.item.collectAsStateWithLifecycle()
     val review by viewModel.review.collectAsStateWithLifecycle()
-    val saved by viewModel.saved.collectAsStateWithLifecycle()
-
-    LaunchedEffect(saved) {
-        if (saved) onBack()
-    }
+    val authorName by viewModel.authorName.collectAsStateWithLifecycle()
+    val isReadOnly = viewModel.isReadOnly
 
     if (item == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -58,9 +52,14 @@ fun ReviewFormScreen(
     ReviewFormContent(
         item = item!!,
         review = review,
+        authorName = authorName,
+        isReadOnly = isReadOnly,
         onCommentChange = viewModel::onCommentChange,
         onRatingChange = viewModel::onRatingChange,
-        onSave = viewModel::saveReview,
+        onSave = {
+            viewModel.saveReview()
+            onBack()
+        },
         onBack = onBack
     )
 }
@@ -69,6 +68,8 @@ fun ReviewFormScreen(
 fun ReviewFormContent(
     item: Item,
     review: UserReview,
+    authorName: String,
+    isReadOnly: Boolean,
     onCommentChange: (String) -> Unit,
     onRatingChange: (Int) -> Unit,
     onSave: () -> Unit,
@@ -95,17 +96,37 @@ fun ReviewFormContent(
                         .clickable { onBack() }
                 )
                 Text(
-                    text = "// оценить",
+                    text = if (isReadOnly) "// ревью" else "// оценить",
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     modifier = Modifier.align(Alignment.Center)
                 )
+                if (!isReadOnly) {
+                    Icon(
+                        imageVector = Icons.Outlined.Check,
+                        contentDescription = "сохранить",
+                        tint = TerminalGreen,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .size(24.dp)
+                            .clickable { onSave() }
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalLine(strokeWidth = Hairline)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        if (isReadOnly) {
+            Text(
+                text = "// автор: ${authorName.lowercase()}",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextMuted
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
         Text(
             text = item.name.lowercase(),
@@ -126,7 +147,7 @@ fun ReviewFormContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "// my_comment: String?",
+            text = if (isReadOnly) "// comment: String?" else "// my_comment: String?",
             style = MaterialTheme.typography.labelSmall,
             color = TextMuted
         )
@@ -134,6 +155,7 @@ fun ReviewFormContent(
         OutlinedTextField(
             value = review.comment,
             onValueChange = onCommentChange,
+            enabled = !isReadOnly,
             minLines = 3,
             shape = RoundedCornerShape(0.dp),
             colors = OutlinedTextFieldDefaults.colors(
@@ -142,7 +164,9 @@ fun ReviewFormContent(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
                 focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary
+                unfocusedTextColor = TextPrimary,
+                disabledBorderColor = LineColor,
+                disabledTextColor = TextSecondary
             ),
             modifier = Modifier.fillMaxWidth()
         )
@@ -150,7 +174,7 @@ fun ReviewFormContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "// my_rating: Int (1..5)",
+            text = if (isReadOnly) "// rating: Int (1..5)" else "// my_rating: Int (1..5)",
             style = MaterialTheme.typography.labelSmall,
             color = TextMuted
         )
@@ -168,7 +192,7 @@ fun ReviewFormContent(
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onRatingChange(star) }
+                            .then(if (!isReadOnly) Modifier.clickable { onRatingChange(star) } else Modifier)
                     )
                     Text(
                         text = (star - 1).toString(),
@@ -189,15 +213,6 @@ fun ReviewFormContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         WireButton(
-            text = "save_my_review()",
-            onClick = onSave,
-            isAccent = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        WireButton(
             text = "navigateBack()",
             onClick = onBack,
             modifier = Modifier.fillMaxWidth()
@@ -206,8 +221,6 @@ fun ReviewFormContent(
         Spacer(modifier = Modifier.height(32.dp))
     }
 }
-
-
 
 @Preview(
     showBackground = true,
@@ -223,7 +236,7 @@ fun ReviewFormPreview() {
                 id = "1",
                 name = "kotlin",
                 description = "statically typed programming language",
-                imageUrl = null
+                symbol = "KT"
             ),
             review = UserReview(
                 userId = "u1",
@@ -234,7 +247,9 @@ fun ReviewFormPreview() {
             onCommentChange = {},
             onRatingChange = {},
             onSave = {},
-            onBack = {}
+            onBack = {},
+            authorName = "glofko",
+            isReadOnly = true
         )
     }
 }

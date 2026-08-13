@@ -6,6 +6,23 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Dataset
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SmartToy
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Terminal
+import androidx.compose.material.icons.outlined.VideogameAsset
+import androidx.compose.material.icons.outlined.Web
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,17 +33,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
 import com.example.codebox.domain.Item
 import com.example.codebox.domain.ReviewWithAuthor
+import com.example.codebox.domain.UserReview
 import com.example.codebox.presentation.theme.*
+import com.example.codebox.presentation.common.*
 
 private val Hairline = 2.5f
 private val Wire = 1.5f
@@ -40,6 +59,8 @@ fun DetailScreen(
     itemId: String,
     onBack: () -> Unit,
     onRateClick: () -> Unit,
+    onReviewAuthorClick: (String) -> Unit,
+    onReviewClick: (String, String) -> Unit,
     viewModel: DetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -63,8 +84,11 @@ fun DetailScreen(
             DetailScreenContent(
                 item = state.item,
                 reviews = state.reviews,
+                myReview = state.myReview,
                 onRateClick = onRateClick,
-                onBack = onBack
+                onBack = onBack,
+                onReviewAuthorClick = onReviewAuthorClick,
+                onReviewClick = onReviewClick
             )
         }
     }
@@ -74,8 +98,11 @@ fun DetailScreen(
 fun DetailScreenContent(
     item: Item,
     reviews: List<ReviewWithAuthor>,
+    myReview: UserReview?,
     onRateClick: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onReviewAuthorClick: (String) -> Unit,
+    onReviewClick: (String, String) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -83,37 +110,57 @@ fun DetailScreenContent(
             .background(PureBlack)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
-
     ) {
+        // ── Шапка ──
         // ── Шапка ──
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 32.dp, bottom = 12.dp)
         ) {
-            Box(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Левый блок: назад
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Text(
+                        text = "< назад",
+                        color = TerminalGreen,
+                        modifier = Modifier.clickable { onBack() }
+                    )
+                }
+
+                // Центральный блок: заголовок
                 Text(
-                    text = "< назад",
-                    color = TerminalGreen,
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .clickable { onBack() }
-                )
-                val type = item.type
-                Text(
-                    text = "// переменная: $type",
+                    text = "// переменная: ${item.type}",
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
-                    modifier = Modifier.align(Alignment.Center)
+                    modifier = Modifier.weight(2f),
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
+
+                // Правый блок: пустой (для баланса ширины)
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    Spacer(modifier = Modifier.width(1.dp))
+                }
             }
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalLine(strokeWidth = Hairline)
+
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ── Картинка + название + описание ──
+        // ── Большой квадрат с символом/иконкой + название + описание ──
         Row(
             verticalAlignment = Alignment.Top,
             modifier = Modifier.fillMaxWidth()
@@ -130,12 +177,53 @@ fun DetailScreenContent(
                         style = Stroke(width = Wire)
                     )
                 }
-                AsyncImage(
-                    model = item.imageUrl ?: "https://via.placeholder.com/120",
-                    contentDescription = item.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+
+                when {
+                    !item.symbol.isNullOrBlank() -> {
+                        Text(
+                            text = item.symbol,
+                            color = TerminalGreen,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 40.sp,
+                            style = MaterialTheme.typography.headlineLarge
+                        )
+                    }
+                    !item.iconKey.isNullOrBlank() -> {
+                        val iconVector = when (item.iconKey) {
+                            "code" -> Icons.Outlined.Code
+                            "terminal" -> Icons.Outlined.Terminal
+                            "bug" -> Icons.Outlined.BugReport
+                            "cloud" -> Icons.Outlined.Cloud
+                            "storage" -> Icons.Outlined.Storage
+                            "palette" -> Icons.Outlined.Palette
+                            "phone" -> Icons.Outlined.PhoneAndroid
+                            "security" -> Icons.Outlined.Security
+                            "chart" -> Icons.Outlined.BarChart
+                            "robot" -> Icons.Outlined.SmartToy
+                            "game" -> Icons.Outlined.VideogameAsset
+                            "build" -> Icons.Outlined.Build
+                            "web" -> Icons.Outlined.Web
+                            "dataset" -> Icons.Outlined.Dataset
+                            "settings" -> Icons.Outlined.Settings
+                            else -> Icons.Outlined.Code
+                        }
+                        Icon(
+                            imageVector = iconVector,
+                            contentDescription = null,
+                            tint = TerminalGreen,
+                            modifier = Modifier.size(56.dp)
+                        )
+                    }
+                    else -> {
+                        Text(
+                            text = item.name.take(2).uppercase(),
+                            color = TerminalGreen,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 40.sp,
+                            style = MaterialTheme.typography.headlineLarge
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -161,13 +249,22 @@ fun DetailScreenContent(
         HorizontalLine(strokeWidth = Hairline)
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ── Кнопка оценить ──
-        WireButton(
-            text = "[ оценить ]",
-            onClick = onRateClick,
-            isAccent = true,
-            modifier = Modifier.fillMaxWidth()
-        )
+        // ── Кнопка: оценить / уже оценено ──
+        if (myReview != null) {
+            WireButton(
+                text = "[ уже оценено ]",
+                onClick = onRateClick,
+                isAccent = false,
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            WireButton(
+                text = "[ оценить ]",
+                onClick = onRateClick,
+                isAccent = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
         HorizontalLine(strokeWidth = Hairline)
@@ -191,7 +288,11 @@ fun DetailScreenContent(
             )
         } else {
             reviews.forEach { review ->
-                PublicReviewRow(review = review)
+                PublicReviewRow(
+                    review = review,
+                    onAuthorClick = { onReviewAuthorClick(review.userId) },
+                    onClick = { onReviewClick(review.itemId, review.userId) }
+                )
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }
@@ -200,13 +301,18 @@ fun DetailScreenContent(
     }
 }
 
-// ── Карточка ревью с прямоугольной обводкой ──
+// ── Карточка ревью ──
 @Composable
-fun PublicReviewRow(review: ReviewWithAuthor) {
+fun PublicReviewRow(
+    review: ReviewWithAuthor,
+    onAuthorClick: () -> Unit,
+    onClick: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
+            .clickable(onClick = onClick)
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
             drawRect(
@@ -230,7 +336,8 @@ fun PublicReviewRow(review: ReviewWithAuthor) {
                 Text(
                     text = review.authorName.lowercase(),
                     style = MaterialTheme.typography.titleMedium,
-                    color = TerminalGreen
+                    color = TerminalGreen,
+                    modifier = Modifier.clickable { onAuthorClick() }
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -262,61 +369,6 @@ fun PublicReviewRow(review: ReviewWithAuthor) {
     }
 }
 
-@Composable
-fun HorizontalLine(
-    modifier: Modifier = Modifier,
-    color: Color = LineColor,
-    strokeWidth: Float = Wire
-) {
-    Canvas(modifier = modifier.fillMaxWidth().height(2.dp)) {
-        drawLine(
-            color = color,
-            start = Offset(0f, size.height / 2),
-            end = Offset(size.width, size.height / 2),
-            strokeWidth = strokeWidth
-        )
-    }
-}
-
-@Composable
-fun WireButton(
-    text: String,
-    onClick: () -> Unit,
-    isAccent: Boolean = false,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            drawRect(
-                color = if (isAccent) TerminalGreen else LineColor,
-                topLeft = Offset.Zero,
-                size = size,
-                style = Stroke(width = if (isAccent) Accent else Wire)
-            )
-        }
-        Text(
-            text = text,
-            color = if (isAccent) TerminalGreen else TextPrimary,
-            style = MaterialTheme.typography.labelLarge
-        )
-    }
-}
-
-@Composable
-fun BlinkingCursor() {
-    Text(
-        text = "█",
-        color = TerminalGreen,
-        style = MaterialTheme.typography.displayLarge
-    )
-}
-
 @Preview(
     showBackground = true,
     showSystemUi = true,
@@ -332,26 +384,22 @@ fun DetailScreenPreview() {
                 name = "kotlin",
                 type = "язык",
                 description = "statically typed programming language",
-                imageUrl = null
+                symbol = "KT"
             ),
             reviews = listOf(
                 ReviewWithAuthor(
                     userId = "u2",
                     itemId = "1",
-                    comment = "корутины — топ, использую каждый день",
+                    comment = "корутины — топ",
                     rating = 5,
                     authorName = "codeNinja"
-                ),
-                ReviewWithAuthor(
-                    userId = "u3",
-                    itemId = "1",
-                    comment = "",
-                    rating = 3,
-                    authorName = "javaVeteran"
                 )
             ),
+            myReview = UserReview(userId = "u1", itemId = "1", comment = "класс", rating = 4),
             onRateClick = {},
-            onBack = {}
+            onBack = {},
+            onReviewAuthorClick = {},
+            onReviewClick = { _, _ -> }
         )
     }
 }

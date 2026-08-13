@@ -10,7 +10,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.example.codebox.presentation.profile.WireAvatar
+import com.example.codebox.presentation.common.WireAvatar
+
 
 @Composable
 fun AvatarImage(

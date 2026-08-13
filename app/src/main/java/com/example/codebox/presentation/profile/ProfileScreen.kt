@@ -7,7 +7,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -23,10 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -35,18 +31,15 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
 import com.example.codebox.domain.ReviewWithItem
 import com.example.codebox.domain.UserReview
 import com.example.codebox.presentation.components.AvatarImage
-import com.example.codebox.presentation.feed.HorizontalLine
-
-import com.example.codebox.presentation.feed.WireBottomBar
+import com.example.codebox.presentation.common.*
 import com.example.codebox.presentation.theme.*
 
 private val Hairline = 2.5f
-private val Wire     = 1.5f
-private val Accent   = 2f
+private val Wire = 1.5f
+private val Accent = 2f
 private val LineColor = Color(0xFF777777)
 private val LineMuted = Color(0xFF555555)
 private val StarEmpty = Color(0xFF333333)
@@ -54,27 +47,28 @@ private val StarEmpty = Color(0xFF333333)
 @Composable
 fun ProfileScreen(
     onReviewClick: (String) -> Unit,
+    onEditReviewClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel(),
     onFeedClick: () -> Unit,
     onSearchClick: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var showDeleteConfirm by remember { mutableStateOf<ReviewWithItem?>(null)}
+    var showDeleteConfirm by remember { mutableStateOf<ReviewWithItem?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.loadProfile()
     }
     ProfileScreenContent(
         uiState = uiState,
-
         onReviewClick = onReviewClick,
-        onShowDeleteConfirm = { showDeleteConfirm = it},
+        onEditReviewClick = onEditReviewClick,
+        onShowDeleteConfirm = { showDeleteConfirm = it },
         onSettingsClick = onSettingsClick,
         onFeedClick = onFeedClick,
-    onSearchClick = onSearchClick,
+        onSearchClick = onSearchClick,
     )
-    if (showDeleteConfirm != null){
+    if (showDeleteConfirm != null) {
         DeleteConfirmDialog(
             review = showDeleteConfirm!!,
             onConfirm = {
@@ -89,8 +83,8 @@ fun ProfileScreen(
 @Composable
 fun ProfileScreenContent(
     uiState: ProfileUiState,
-
     onReviewClick: (String) -> Unit,
+    onEditReviewClick: (String) -> Unit,
     onShowDeleteConfirm: (ReviewWithItem) -> Unit,
     onSettingsClick: () -> Unit,
     onFeedClick: () -> Unit,
@@ -104,16 +98,13 @@ fun ProfileScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-
                 .padding(horizontal = 16.dp)
         ) {
-
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 32.dp, bottom = 12.dp)
             ) {
-                // Верхний ряд
                 Box(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = "// профиль",
@@ -131,10 +122,7 @@ fun ProfileScreenContent(
                             .clickable { onSettingsClick() }
                     )
                 }
-
-                // ← отступ между текстом и линией
                 Spacer(modifier = Modifier.height(8.dp))
-
                 HorizontalLine(strokeWidth = Hairline)
             }
             Box(modifier = Modifier.weight(1f)) {
@@ -147,7 +135,6 @@ fun ProfileScreenContent(
                             BlinkingCursor()
                         }
                     }
-
                     is ProfileUiState.Error -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -167,26 +154,20 @@ fun ProfileScreenContent(
                             }
                         }
                     }
-
                     is ProfileUiState.Success -> {
                         ProfileBody(
                             state = state,
                             onReviewClick = onReviewClick,
-                            onShowDeleteConfirm = onShowDeleteConfirm
+                            onShowDeleteConfirm = onShowDeleteConfirm,
+                            onEditReviewClick = onEditReviewClick,
                         )
                     }
                 }
-
             }
-            WireBottomBar(
-                    currentTab = "profile",
-            onFeed = onFeedClick,
-            onSearch = onSearchClick,
-            onProfile = {}
-            )
         }
     }
 }
+
 @Composable
 fun WireBottomBar(
     currentTab: String,
@@ -204,26 +185,31 @@ fun WireBottomBar(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            BottomNavIcon(icon = Icons.Outlined.Home,
+            BottomNavIcon(
+                icon = androidx.compose.material.icons.Icons.Outlined.Home,
                 label = "feed",
-
                 selected = currentTab == "feed",
-                onClick = onFeed)
-            BottomNavIcon(icon = Icons.Outlined.Search,
+                onClick = onFeed
+            )
+            BottomNavIcon(
+                icon = androidx.compose.material.icons.Icons.Outlined.Search,
                 label = "search",
                 selected = currentTab == "search",
-                onClick = onSearch)
-            BottomNavIcon(icon = Icons.Outlined.Person,
+                onClick = onSearch
+            )
+            BottomNavIcon(
+                icon = androidx.compose.material.icons.Icons.Outlined.Person,
                 label = "profile",
                 selected = currentTab == "profile",
-                onClick = onProfile)
-
+                onClick = onProfile
+            )
         }
     }
 }
+
 @Composable
 private fun BottomNavIcon(
-    icon: ImageVector,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     selected: Boolean,
     onClick: () -> Unit
@@ -237,6 +223,7 @@ private fun BottomNavIcon(
             .clickable(onClick = onClick)
     )
 }
+
 @Composable
 fun DeleteConfirmDialog(
     review: ReviewWithItem,
@@ -253,7 +240,7 @@ fun DeleteConfirmDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(PureBlack)   // ← сплошной чёрный, не прозрачный
+                .background(PureBlack)
                 .clickable { onDismiss() },
             contentAlignment = Alignment.Center
         ) {
@@ -317,13 +304,15 @@ fun DeleteConfirmDialog(
         }
     }
 }
+
 @Composable
 private fun ProfileBody(
     state: ProfileUiState.Success,
-
     onReviewClick: (String) -> Unit,
-    onShowDeleteConfirm: (ReviewWithItem) -> Unit
+    onEditReviewClick: (String) -> Unit,
+    onShowDeleteConfirm: (ReviewWithItem) -> Unit,
 ) {
+    var expanded by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -335,16 +324,14 @@ private fun ProfileBody(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Start
-        ){
-            Column(){
-                // В ProfileBody, вместо if/else с AsyncImage:
+        ) {
+            Column {
                 AvatarImage(
                     avatarData = state.avatarUrl,
                     nickname = state.nickname,
                     modifier = Modifier.size(100.dp)
                 )
                 Spacer(modifier = Modifier.height(20.dp))
-
                 Text(
                     text = state.nickname,
                     style = MaterialTheme.typography.headlineMedium,
@@ -356,17 +343,9 @@ private fun ProfileBody(
                     style = MaterialTheme.typography.bodyLarge,
                     color = TextSecondary
                 )
-                Spacer(modifier = Modifier.height(20.dp))
-                Text(
-                    text = state.description,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
             }
             Spacer(modifier = Modifier.width(18.dp))
-            Column(){
+            Column {
                 val countReview = state.reviews.count().toString()
                 Text(
                     text = "Количество ревью: $countReview",
@@ -374,9 +353,31 @@ private fun ProfileBody(
                     color = TerminalGreen
                 )
             }
+        }
+        Spacer(modifier = Modifier.width(25.dp))
+        Text(
+            text = state.description,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = if (expanded) Int.MAX_VALUE else 2,
+            color = TextPrimary,
+            modifier = Modifier.align(Alignment.Start)
+        )
 
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            Text(
+                text = if (expanded) "..." else "...",
+                color = TerminalGreen,
+                fontSize = 22.sp,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.clickable { expanded = !expanded }
+            )
         }
 
+        Spacer(modifier = Modifier.height(4.dp))
         DottedDivider()
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -400,21 +401,20 @@ private fun ProfileBody(
             state.reviews.forEach { rw ->
                 ReviewWireRow(
                     rw = rw,
-                    onEditClick = { onReviewClick(rw.review.itemId) },
+                    onCardClick = { onReviewClick(rw.review.itemId) },
+                    onEditClick = { onEditReviewClick(rw.review.itemId) },
                     onDeleteClick = { onShowDeleteConfirm(rw) }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }
-
-
     }
 }
 
-// ─── Карточка отзыва ─────────────────────────────────────
 @Composable
 fun ReviewWireRow(
     rw: ReviewWithItem,
+    onCardClick: () -> Unit,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
@@ -424,6 +424,7 @@ fun ReviewWireRow(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
+            .clickable(onClick = onCardClick)
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
             drawRect(
@@ -433,7 +434,6 @@ fun ReviewWireRow(
                 style = Stroke(width = Wire)
             )
         }
-
 
         Column(
             modifier = Modifier
@@ -474,13 +474,13 @@ fun ReviewWireRow(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
                 Text(
-                    text = if (expanded) "[-]" else "[...]", // ← стрелка изменена
+                    text = if (expanded) "..." else "...",
                     color = TerminalGreen,
                     fontSize = 22.sp,
                     style = MaterialTheme.typography.titleMedium,
@@ -527,99 +527,6 @@ fun ReviewWireRow(
     }
 }
 
-@Composable
-fun WireAvatar(initial: String, modifier: Modifier = Modifier) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-            val c = 14f
-            drawRect(LineColor, topLeft = Offset.Zero, size = size, style = Stroke(width = Wire))
-            drawLine(LineColor, Offset(0f, 0f), Offset(c, 0f), Accent)
-            drawLine(LineColor, Offset(0f, 0f), Offset(0f, c), Accent)
-            drawLine(LineColor, Offset(w - c, 0f), Offset(w, 0f), Accent)
-            drawLine(LineColor, Offset(w, 0f), Offset(w, c), Accent)
-            drawLine(LineColor, Offset(0f, h - c), Offset(0f, h), Accent)
-            drawLine(LineColor, Offset(0f, h), Offset(c, h), Accent)
-            drawLine(LineColor, Offset(w - c, h), Offset(w, h), Accent)
-            drawLine(LineColor, Offset(w, h - c), Offset(w, h), Accent)
-        }
-        Text(
-            text = initial,
-            color = TerminalGreen,
-            style = MaterialTheme.typography.displaySmall
-        )
-    }
-}
-
-@Composable
-fun DottedDivider(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.fillMaxWidth().height(2.dp)) {
-        drawLine(
-            color = LineMuted,
-            start = Offset(0f, size.height / 2),
-            end = Offset(size.width, size.height / 2),
-            strokeWidth = Hairline,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f), 0f)
-        )
-    }
-}
-
-@Composable
-fun HorizontalLine(
-    modifier: Modifier = Modifier,
-    color: Color = LineColor,
-    strokeWidth: Float = Wire
-) {
-    Canvas(modifier = modifier.fillMaxWidth().height(2.dp)) {
-        drawLine(
-            color = color,
-            start = Offset(0f, size.height / 2),
-            end = Offset(size.width, size.height / 2),
-            strokeWidth = strokeWidth
-        )
-    }
-}
-
-@Composable
-fun WireButton(
-    text: String,
-    onClick: () -> Unit,
-    isAccent: Boolean = false,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            drawRect(
-                color = if (isAccent) TerminalGreen else LineColor,
-                topLeft = Offset.Zero,
-                size = size,
-                style = Stroke(width = if (isAccent) Accent else Wire)
-            )
-        }
-        Text(
-            text = text,
-            color = if (isAccent) TerminalGreen else TextPrimary,
-            style = MaterialTheme.typography.titleMedium
-        )
-    }
-}
-
-@Composable
-fun BlinkingCursor() {
-    Text(
-        text = "█",
-        color = TerminalGreen,
-        style = MaterialTheme.typography.displayLarge
-    )
-}
-
 @Preview(
     showBackground = true,
     showSystemUi = true,
@@ -662,13 +569,12 @@ fun ProfileScreenPreview() {
                 avatarUrl = "",
                 description = "описание"
             ),
-
-
             onReviewClick = {},
             onShowDeleteConfirm = {},
             onSettingsClick = {},
             onSearchClick = {},
-            onFeedClick = {}
+            onFeedClick = {},
+            onEditReviewClick = {}
         )
     }
 }

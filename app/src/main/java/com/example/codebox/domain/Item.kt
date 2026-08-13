@@ -7,5 +7,6 @@ data class Item(
     val name: String = "",
     val type: String = "",
     val description: String = "",
-    val imageUrl: String? = null
+    val symbol: String? = null,
+    val iconKey: String? = null
 )

@@ -35,7 +35,8 @@ class DetailViewModel @Inject constructor(
                     return@launch
                 }
                 val reviews = userReviewRepository.getReviewsForItem(itemId)
-                _uiState.value = DetailUiState.Success(item, reviews)
+                val myReview = userReviewRepository.getReview(userId, itemId)
+                _uiState.value = DetailUiState.Success(item, reviews, myReview)
             } catch (e: Exception) {
                 _uiState.value = DetailUiState.Error(e.message ?: "ошибка загрузки")
             }

@@ -2,7 +2,6 @@ package com.example.codebox.presentation.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,22 +14,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.codebox.presentation.common.*
 import com.example.codebox.presentation.components.AvatarImage
-import com.example.codebox.presentation.profile.WireButton
 import com.example.codebox.presentation.theme.*
 
 private val Hairline = 2.5f
-private val Wire = 1.5f
-private val Accent = 2f
 private val LineColor = Color(0xFF777777)
-private val LineMuted = Color(0xFF555555)
 
 @Composable
 fun SettingsScreen(
@@ -49,9 +43,6 @@ fun SettingsScreen(
         nickname = viewModel.nickname.value,
         description = viewModel.description.value,
         avatarUrl = viewModel.avatarUrl.value,
-        error = viewModel.error.value,
-        success = viewModel.success.value,
-        isLoading = viewModel.isLoading.value,
         onNicknameChange = viewModel::onNicknameChange,
         onDescriptionChange = viewModel::onDescriptionChange,
         onAvatarClick = { launcher.launch("image/*") },
@@ -72,9 +63,6 @@ fun SettingsScreenContent(
     nickname: String,
     description: String,
     avatarUrl: String,
-    error: String?,
-    success: String?,
-    isLoading: Boolean,
     onNicknameChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onAvatarClick: () -> Unit,
@@ -172,6 +160,7 @@ fun SettingsScreenContent(
         )
 
         Spacer(modifier = Modifier.height(24.dp))
+
         Text(
             text = "// description: String",
             style = MaterialTheme.typography.labelSmall,
@@ -181,7 +170,7 @@ fun SettingsScreenContent(
         OutlinedTextField(
             value = description,
             onValueChange = onDescriptionChange,
-            singleLine = true,
+            minLines = 3,
             shape = RoundedCornerShape(0.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = TerminalGreen,
@@ -204,30 +193,6 @@ fun SettingsScreenContent(
     }
 }
 
-@Composable
-fun BlinkingCursor() {
-    Text(
-        text = "█",
-        color = TerminalGreen,
-        style = MaterialTheme.typography.displayLarge
-    )
-}
-@Composable
-fun HorizontalLine(
-    modifier: Modifier = Modifier,
-    color: Color = LineColor,
-    strokeWidth: Float = Wire
-) {
-    Canvas(modifier = modifier.fillMaxWidth().height(2.dp)) {
-        drawLine(
-            color = color,
-            start = Offset(0f, size.height / 2),
-            end = Offset(size.width, size.height / 2),
-            strokeWidth = strokeWidth
-        )
-    }
-}
-
 @Preview(
     showBackground = true,
     showSystemUi = true,
@@ -240,9 +205,6 @@ fun SettingsScreenPreview() {
         SettingsScreenContent(
             nickname = "codeNinja",
             avatarUrl = "",
-            error = null,
-            success = null,
-            isLoading = false,
             onNicknameChange = {},
             onAvatarClick = {},
             onSave = {},

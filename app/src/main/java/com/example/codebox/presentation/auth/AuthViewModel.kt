@@ -40,7 +40,7 @@ class AuthViewModel @Inject constructor() : ViewModel(){
 
     fun signIn(onSuccess: () -> Unit){
         if (_email.value.isBlank() || _password.value.isBlank()){
-            _error.value = "Заполните все поля"
+            _error.value = "заполните все поля"
             return
         }
         viewModelScope.launch {
@@ -49,7 +49,7 @@ class AuthViewModel @Inject constructor() : ViewModel(){
                 auth.signInWithEmailAndPassword(_email.value, _password.value).await()
                 onSuccess()
             } catch (e: Exception){
-                _error.value = e.message ?: "Ошибка входа"
+                _error.value = e.message ?: "ошибка входа"
             }
             _isLoading.value = false
         }
@@ -57,7 +57,7 @@ class AuthViewModel @Inject constructor() : ViewModel(){
 
     fun signUp(onSuccess: () -> Unit){
         if (_email.value.isBlank() || _password.value.isBlank()){
-            _error.value = "Заполните все поля"
+            _error.value = "заполните все поля"
             return
         }
         viewModelScope.launch {
@@ -66,7 +66,7 @@ class AuthViewModel @Inject constructor() : ViewModel(){
                 auth.createUserWithEmailAndPassword(_email.value, _password.value).await()
                 onSuccess()
             } catch (e: Exception){
-                _error.value = e.message ?: "Ошибка регистрации"
+                _error.value = e.message ?: "ошибка регистрации"
             }
             _isLoading.value = false
         }

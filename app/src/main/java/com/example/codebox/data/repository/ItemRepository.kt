@@ -25,8 +25,9 @@ class ItemRepository @Inject constructor(
                         id = doc.getString("id") ?: doc.id,
                         name = doc.getString("name") ?: "",
                         type = doc.getString("type") ?: "",
-                        imageUrl = doc.getString("imageUrl"),
-                        description = doc.getString("description") ?: ""
+                        description = doc.getString("description") ?: "",
+                        symbol = doc.getString("symbol") ?: "",
+                        iconKey = doc.getString("iconKey") ?: ""
                     )
                 } ?: emptyList()
                 trySend(items)
@@ -37,9 +38,6 @@ class ItemRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    suspend fun addItem(item: Item) {
-        collection.document(item.id).set(item).await()
-    }
 
     suspend fun getItemById(itemId: String) : Item? {
         val doc = collection.document(itemId).get().await()
@@ -48,8 +46,9 @@ class ItemRepository @Inject constructor(
                 id = doc.getString("id") ?: doc.id,
                 name = doc.getString("name") ?: "",
                 type = doc.getString("type") ?: "",
-                imageUrl = doc.getString("imageUrl"),
-                description = doc.getString("description") ?: ""
+                description = doc.getString("description") ?: "",
+                symbol = doc.getString("symbol") ?: "",
+                iconKey = doc.getString("iconKey") ?: ""
             )
         } else null
     }

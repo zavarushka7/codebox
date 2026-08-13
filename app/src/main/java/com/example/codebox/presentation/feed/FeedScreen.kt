@@ -7,9 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,16 +18,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.codebox.domain.Item
 import com.example.codebox.presentation.theme.*
+import com.example.codebox.presentation.common.*
 
 private val Hairline = 2.5f
 private val Wire = 1.5f
-private val Accent = 2f
 private val LineColor = Color(0xFF777777)
 
 @Composable
@@ -71,18 +71,16 @@ fun FeedScreenContent(
                     .fillMaxWidth()
                     .padding(top = 32.dp, bottom = 12.dp)
             ) {
-                    Text(
-                        text = "// codebox",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = TextPrimary,
-
-                    )
-
+                Text(
+                    text = "// codebox",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = TextPrimary
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalLine(strokeWidth = Hairline)
             }
 
-            // ── Контент (занимает всё место между шапкой и панелью) ──
+            // ── Контент ──
             Box(modifier = Modifier.weight(1f)) {
                 when (val state = uiState) {
                     is FeedUiState.Loading -> {
@@ -93,7 +91,6 @@ fun FeedScreenContent(
                             BlinkingCursor()
                         }
                     }
-
                     is FeedUiState.Error -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -102,7 +99,6 @@ fun FeedScreenContent(
                             Text(state.message, color = TextPrimary)
                         }
                     }
-
                     is FeedUiState.Success -> {
                         if (state.items.isEmpty()) {
                             Box(
@@ -128,68 +124,10 @@ fun FeedScreenContent(
                     }
                 }
             }
-
-            // ── Нижняя панель (прижата к низу) ──
-            WireBottomBar(
-                currentTab = "feed",
-                onFeed = {},
-                onSearch = onSearchClick,
-                onProfile = onProfileClick
-            )
         }
     }
 }
 
-@Composable
-fun WireBottomBar(
-    currentTab: String,
-    onFeed: () -> Unit,
-    onSearch: () -> Unit,
-    onProfile: () -> Unit
-) {
-    Column {
-        HorizontalLine()
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(78.dp)
-                .background(PureBlack),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            BottomNavIcon(icon = Icons.Outlined.Home,
-                label = "feed",
-
-                selected = currentTab == "feed",
-                onClick = onFeed)
-            BottomNavIcon(icon = Icons.Outlined.Search,
-                label = "search",
-                selected = currentTab == "search",
-                onClick = onSearch)
-            BottomNavIcon(icon = Icons.Outlined.Person,
-                label = "profile",
-                selected = currentTab == "profile",
-                onClick = onProfile)
-
-        }
-    }
-}
-@Composable
-private fun BottomNavIcon(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Icon(
-        imageVector = icon,
-        contentDescription = label,
-        tint = if (selected) TerminalGreen else TextSecondary,
-        modifier = Modifier
-            .size(24.dp)
-            .clickable(onClick = onClick)
-    )
-}
 @Composable
 fun ItemWireRow(item: Item, onClick: () -> Unit) {
     Box(
@@ -206,23 +144,82 @@ fun ItemWireRow(item: Item, onClick: () -> Unit) {
                 style = Stroke(width = Wire)
             )
         }
-
         Row(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(start = 24.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Box(
+                modifier = Modifier.size(40.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    drawRect(
+                        color = LineColor,
+                        style = Stroke(width = Wire)
+                    )
+                }
+
+                when {
+                    !item.symbol.isNullOrBlank() -> {
+                        Text(
+                            text = item.symbol,
+                            color = TerminalGreen,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                    !item.iconKey.isNullOrBlank() -> {
+                        val iconVector = when (item.iconKey) {
+                            "code" -> Icons.Outlined.Code
+                            "terminal" -> Icons.Outlined.Terminal
+                            "bug" -> Icons.Outlined.BugReport
+                            "cloud" -> Icons.Outlined.Cloud
+                            "storage" -> Icons.Outlined.Storage
+                            "palette" -> Icons.Outlined.Palette
+                            "phone" -> Icons.Outlined.PhoneAndroid
+                            "security" -> Icons.Outlined.Security
+                            "chart" -> Icons.Outlined.BarChart
+                            "robot" -> Icons.Outlined.SmartToy
+                            "game" -> Icons.Outlined.VideogameAsset
+                            "build" -> Icons.Outlined.Build
+                            "web" -> Icons.Outlined.Web
+                            "dataset" -> Icons.Outlined.Dataset
+                            "settings" -> Icons.Outlined.Settings
+                            else -> Icons.Outlined.Code
+                        }
+                        Icon(
+                            imageVector = iconVector,
+                            contentDescription = null,
+                            tint = TerminalGreen,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    else -> {
+                        // fallback: первые 2 буквы названия
+                        Text(
+                            text = item.name.take(2).uppercase(),
+                            color = TerminalGreen,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.name.lowercase(),
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary
                 )
-                if (item.description.isNotBlank()) {
+                if (item.type.isNotBlank()) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = item.description,
+                        text = item.type,
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
@@ -230,37 +227,6 @@ fun ItemWireRow(item: Item, onClick: () -> Unit) {
             }
         }
     }
-}
-
-
-
-@Composable
-fun HorizontalLine(
-    modifier: Modifier = Modifier,
-    color: Color = LineColor,
-    strokeWidth: Float = Wire
-) {
-    Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(2.dp)
-    ) {
-        drawLine(
-            color = color,
-            start = Offset(0f, size.height / 2),
-            end = Offset(size.width, size.height / 2),
-            strokeWidth = strokeWidth
-        )
-    }
-}
-
-@Composable
-fun BlinkingCursor() {
-    Text(
-        text = "█",
-        color = TerminalGreen,
-        style = MaterialTheme.typography.displayLarge
-    )
 }
 
 @Preview(
@@ -280,7 +246,6 @@ fun FeedScreenPreview() {
                     Item(name = "go", description = "")
                 )
             ),
-
             onItemClick = {},
             onProfileClick = {},
             onSearchClick = {}
