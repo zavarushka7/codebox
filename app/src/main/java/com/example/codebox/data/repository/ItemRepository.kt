@@ -53,5 +53,23 @@ class ItemRepository @Inject constructor(
         } else null
     }
 
+    suspend fun search(query: String): List<Item> {
+        val lowerQuery = query.trim().lowercase()
+
+        val allItems = collection.get().await().documents.mapNotNull { doc ->
+            Item(
+                id = doc.getString("id") ?: doc.id,
+                name = doc.getString("name") ?: "",
+                type = doc.getString("type") ?: "",
+                description = doc.getString("description") ?: "",
+                symbol = doc.getString("symbol"),
+                iconKey = doc.getString("iconKey")
+            )
+        }
+
+        return allItems.filter { item ->
+            item.name.lowercase().contains(lowerQuery)
+        }
+    }
 
 }

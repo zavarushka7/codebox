@@ -1,4 +1,4 @@
-package com.example.codebox.presentation.feed
+package com.example.codebox.presentation.search
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -6,10 +6,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,35 +26,43 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.codebox.domain.Item
-import com.example.codebox.presentation.theme.*
 import com.example.codebox.presentation.common.*
+import com.example.codebox.presentation.theme.*
+
 
 private val Hairline = 2.5f
 private val Wire = 1.5f
 private val LineColor = Color(0xFF777777)
 
-@Composable
-fun FeedScreen(
-    onItemClick: (String) -> Unit,
-    onProfileClick: () -> Unit,
-    onSearchClick: () -> Unit,
-    viewModel: FeedViewModel = hiltViewModel()
-) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    FeedScreenContent(
-        uiState = uiState,
-        onItemClick = onItemClick,
 
+@Composable
+fun SearchScreen(
+    onBack: () -> Unit,
+    onItemClick: (String) -> Unit,
+    viewModel: SearchViewModel = hiltViewModel()
+) {
+    val query by viewModel.query.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    SearchScreenContent(
+        query = query,
+        onQueryChange = viewModel::onQueryChange,
+        uiState = uiState,
+        onBack = onBack,
+        onItemClick = onItemClick
     )
 }
 
 @Composable
-fun FeedScreenContent(
-    uiState: FeedUiState,
-    onItemClick: (String) -> Unit,
-
+fun SearchScreenContent(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    uiState: SearchUiState,
+    onBack: () -> Unit,
+    onItemClick: (String) -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -69,19 +80,71 @@ fun FeedScreenContent(
                     .fillMaxWidth()
                     .padding(top = 32.dp, bottom = 12.dp)
             ) {
-                Text(
-                    text = "// codebox",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = TextPrimary
-                )
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "< назад",
+                        color = TerminalGreen,
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .clickable { onBack() }
+                    )
+                    Text(
+                        text = "// поиск",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = TextPrimary,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalLine(strokeWidth = Hairline)
             }
 
-            // ── Контент ──
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ── Поле ввода ──
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                placeholder = { Text("// введите запрос", color = TextMuted) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Search,
+                        contentDescription = null,
+                        tint = TerminalGreen
+                    )
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(0.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = TerminalGreen,
+                    unfocusedBorderColor = LineColor,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary,
+                    cursorColor = TerminalGreen
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ── Результаты ──
             Box(modifier = Modifier.weight(1f)) {
                 when (val state = uiState) {
-                    is FeedUiState.Loading -> {
+                    is SearchUiState.Idle -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "// введите запрос для поиска",
+                                color = TextSecondary,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                    is SearchUiState.Loading -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
@@ -89,21 +152,36 @@ fun FeedScreenContent(
                             BlinkingCursor()
                         }
                     }
-                    is FeedUiState.Error -> {
+                    is SearchUiState.Error -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(state.message, color = TextPrimary)
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "// error",
+                                    color = TextMuted,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    text = state.message,
+                                    color = TextPrimary,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
                         }
                     }
-                    is FeedUiState.Success -> {
+                    is SearchUiState.Success -> {
                         if (state.items.isEmpty()) {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("// no items", color = TextSecondary)
+                                Text(
+                                    text = "// ничего не найдено",
+                                    color = TextSecondary,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
                             }
                         } else {
                             LazyColumn(
@@ -111,7 +189,7 @@ fun FeedScreenContent(
                                 contentPadding = PaddingValues(vertical = 8.dp)
                             ) {
                                 items(state.items, key = { it.id }) { item ->
-                                    ItemWireRow(
+                                    SearchItemRow(
                                         item = item,
                                         onClick = { onItemClick(item.id) }
                                     )
@@ -127,7 +205,10 @@ fun FeedScreenContent(
 }
 
 @Composable
-fun ItemWireRow(item: Item, onClick: () -> Unit) {
+private fun SearchItemRow(
+    item: Item,
+    onClick: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -142,12 +223,14 @@ fun ItemWireRow(item: Item, onClick: () -> Unit) {
                 style = Stroke(width = Wire)
             )
         }
+
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 24.dp, end = 12.dp),
+                .padding(start = 12.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // ── Квадрат с символом/иконкой ──
             Box(
                 modifier = Modifier.size(40.dp),
                 contentAlignment = Alignment.Center
@@ -196,7 +279,6 @@ fun ItemWireRow(item: Item, onClick: () -> Unit) {
                         )
                     }
                     else -> {
-                        // fallback: первые 2 буквы названия
                         Text(
                             text = item.name.take(2).uppercase(),
                             color = TerminalGreen,
@@ -207,7 +289,10 @@ fun ItemWireRow(item: Item, onClick: () -> Unit) {
                     }
                 }
             }
+
             Spacer(modifier = Modifier.width(16.dp))
+
+            // ── Название + тип ──
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.name.lowercase(),
@@ -234,18 +319,20 @@ fun ItemWireRow(item: Item, onClick: () -> Unit) {
     backgroundColor = 0xFF000000
 )
 @Composable
-fun FeedScreenPreview() {
+fun SearchScreenPreview() {
     CodeboxTheme {
-        FeedScreenContent(
-            uiState = FeedUiState.Success(
+        SearchScreenContent(
+            query = "kotlin",
+            onQueryChange = {},
+            uiState = SearchUiState.Success(
                 listOf(
-                    Item(name = "kotlin", description = "jvm language"),
-                    Item(name = "rust", description = "systems language"),
-                    Item(name = "go", description = "")
+                    Item(id = "1", name = "kotlin", type = "язык", symbol = "KT"),
+                    Item(id = "2", name = "python", type = "язык", symbol = "Py"),
+                    Item(id = "3", name = "devops", type = "профессия", iconKey = "cloud")
                 )
             ),
-            onItemClick = {},
-
+            onBack = {},
+            onItemClick = {}
         )
     }
 }

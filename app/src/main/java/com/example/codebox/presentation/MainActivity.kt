@@ -31,6 +31,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.foundation.layout.padding  // ← добавь это
+import com.example.codebox.presentation.search.SearchScreen
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -60,6 +61,7 @@ class MainActivity : ComponentActivity() {
                         currentRoute?.startsWith("profile") == true -> "profile"
                         currentRoute?.startsWith("settings") == true -> "profile"
                         currentRoute?.startsWith("user_profile") == true -> "profile"
+                        currentRoute?.startsWith("search") == true -> "search"
                         else -> "feed"
                     }
 
@@ -75,9 +77,7 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 },
-                                onSearch = {
-                                    // TODO: открыть экран поиска
-                                },
+
                                 onProfile = {
                                     if (currentTab != "profile") {
                                         navController.navigate("profile") {
@@ -85,7 +85,9 @@ class MainActivity : ComponentActivity() {
                                             launchSingleTop = true
                                         }
                                     }
-                                }
+                                },
+                                onSearch = { navController.navigate("search") },
+
                             )
                         }
                     ) { paddingValues ->
@@ -100,7 +102,7 @@ class MainActivity : ComponentActivity() {
                                         navController.navigate("detail/$itemId")
                                     },
                                     onProfileClick = { navController.navigate("profile") },
-                                    onSearchClick = {}
+                                    onSearchClick = { navController.navigate("search") }
                                 )
                             }
 
@@ -175,6 +177,14 @@ class MainActivity : ComponentActivity() {
                                     ?: return@composable
                                 UserProfileScreen(
                                     userId = userId,
+                                    onBack = { navController.popBackStack() },
+                                    onItemClick = { itemId ->
+                                        navController.navigate("detail/$itemId")
+                                    }
+                                )
+                            }
+                            composable("search") {
+                                SearchScreen(
                                     onBack = { navController.popBackStack() },
                                     onItemClick = { itemId ->
                                         navController.navigate("detail/$itemId")
