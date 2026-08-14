@@ -71,5 +71,21 @@ class ItemRepository @Inject constructor(
             item.name.lowercase().contains(lowerQuery)
         }
     }
+    suspend fun getTypes(): List<String> {
+        val fromDb = collection.get().await()
+            .documents
+            .mapNotNull { it.getString("type") }
+            .filter { it.isNotBlank() }
+            .distinct()
+
+        val defaults = listOf(
+            "язык программирования",
+            "профессия",
+            "синтаксическая конструкция",
+            "инструмент"
+        )
+
+        return (fromDb + defaults).distinct().sorted()
+    }
 
 }

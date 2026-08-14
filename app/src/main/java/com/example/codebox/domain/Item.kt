@@ -8,5 +8,6 @@ data class Item(
     val type: String = "",
     val description: String = "",
     val symbol: String? = null,
-    val iconKey: String? = null
+    val iconKey: String? = null,
+    val averageRating: Double = 0.0
 )

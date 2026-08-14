@@ -1,10 +1,12 @@
 package com.example.codebox.presentation
 
 import android.annotation.SuppressLint
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.getValue
@@ -19,6 +21,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.codebox.presentation.auth.LoginScreen
+import com.example.codebox.presentation.catalog.CatalogMode
+import com.example.codebox.presentation.catalog.CatalogScreen
 import com.example.codebox.presentation.details.DetailScreen
 import com.example.codebox.presentation.feed.FeedScreen
 import com.example.codebox.presentation.profile.ProfileScreen
@@ -30,8 +34,6 @@ import com.example.codebox.presentation.user_profile.UserProfileScreen
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import dagger.hilt.android.AndroidEntryPoint
-import androidx.compose.foundation.layout.padding  // ← добавь это
-import com.example.codebox.presentation.search.SearchScreen
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -53,7 +55,6 @@ class MainActivity : ComponentActivity() {
                     val currentBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = currentBackStackEntry?.destination?.route
 
-                    // Определяем активный таб по шаблону роута
                     val currentTab = when {
                         currentRoute?.startsWith("feed") == true -> "feed"
                         currentRoute?.startsWith("detail") == true -> "feed"
@@ -61,7 +62,7 @@ class MainActivity : ComponentActivity() {
                         currentRoute?.startsWith("profile") == true -> "profile"
                         currentRoute?.startsWith("settings") == true -> "profile"
                         currentRoute?.startsWith("user_profile") == true -> "profile"
-                        currentRoute?.startsWith("search") == true -> "search"
+                        currentRoute?.startsWith("catalog") == true -> "search"
                         else -> "feed"
                     }
 
@@ -77,7 +78,9 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 },
-
+                                onSearch = {
+                                    navController.navigate("catalog/${CatalogMode.SEARCH.name}")
+                                },
                                 onProfile = {
                                     if (currentTab != "profile") {
                                         navController.navigate("profile") {
@@ -85,9 +88,7 @@ class MainActivity : ComponentActivity() {
                                             launchSingleTop = true
                                         }
                                     }
-                                },
-                                onSearch = { navController.navigate("search") },
-
+                                }
                             )
                         }
                     ) { paddingValues ->
@@ -102,7 +103,9 @@ class MainActivity : ComponentActivity() {
                                         navController.navigate("detail/$itemId")
                                     },
                                     onProfileClick = { navController.navigate("profile") },
-                                    onSearchClick = { navController.navigate("search") }
+                                    onSearchClick = {
+                                        navController.navigate("catalog/${CatalogMode.SEARCH.name}")
+                                    }
                                 )
                             }
 
@@ -124,6 +127,37 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onReviewClick = { _, authorUserId ->
                                         navController.navigate("review_form/$itemId?userId=$authorUserId")
+                                    }
+                                )
+                            }
+
+
+// 2. Айтемы по типу
+                            composable(
+                                route = "catalog/type/{type}",
+                                arguments = listOf(navArgument("type") { type = NavType.StringType })
+                            ) {
+                                CatalogScreen(
+                                    onBack = { navController.popBackStack() },
+                                    onItemClick = { itemId -> navController.navigate("detail/$itemId") },
+                                    onSearchByTypeClick = {},
+                                    onTypeClick = {}
+                                )
+                            }
+
+// 3. Остальные режимы
+                            composable(
+                                route = "catalog/{mode}",
+                                arguments = listOf(navArgument("mode") { type = NavType.StringType })
+                            ) {
+                                CatalogScreen(
+                                    onBack = { navController.popBackStack() },
+                                    onItemClick = { itemId -> navController.navigate("detail/$itemId") },
+                                    onSearchByTypeClick = {
+                                        navController.navigate("catalog/${CatalogMode.TYPES_LIST.name}")
+                                    },
+                                    onTypeClick = { type ->
+                                        navController.navigate("catalog/type/${Uri.encode(type)}")
                                     }
                                 )
                             }
@@ -158,7 +192,9 @@ class MainActivity : ComponentActivity() {
                                         navController.navigate("settings")
                                     },
                                     onFeedClick = { navController.navigate("feed") },
-                                    onSearchClick = {}
+                                    onSearchClick = {
+                                        navController.navigate("catalog/${CatalogMode.SEARCH.name}")
+                                    }
                                 )
                             }
 
@@ -177,14 +213,6 @@ class MainActivity : ComponentActivity() {
                                     ?: return@composable
                                 UserProfileScreen(
                                     userId = userId,
-                                    onBack = { navController.popBackStack() },
-                                    onItemClick = { itemId ->
-                                        navController.navigate("detail/$itemId")
-                                    }
-                                )
-                            }
-                            composable("search") {
-                                SearchScreen(
                                     onBack = { navController.popBackStack() },
                                     onItemClick = { itemId ->
                                         navController.navigate("detail/$itemId")

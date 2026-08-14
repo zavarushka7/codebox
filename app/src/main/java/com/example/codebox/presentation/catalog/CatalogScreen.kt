@@ -1,4 +1,4 @@
-package com.example.codebox.presentation.search
+package com.example.codebox.presentation.catalog
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -22,48 +23,66 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.codebox.domain.Item
 import com.example.codebox.presentation.common.*
 import com.example.codebox.presentation.theme.*
 
-
 private val Hairline = 2.5f
 private val Wire = 1.5f
 private val LineColor = Color(0xFF777777)
 
-
 @Composable
-fun SearchScreen(
+fun CatalogScreen(
     onBack: () -> Unit,
     onItemClick: (String) -> Unit,
-    viewModel: SearchViewModel = hiltViewModel()
+    onSearchByTypeClick: () -> Unit,
+    onTypeClick: (String) -> Unit,
+    viewModel: CatalogViewModel = hiltViewModel()
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val mode = viewModel.mode
+    val typeFilter = viewModel.typeFilter
 
-    SearchScreenContent(
+    CatalogScreenContent(
+        mode = mode,
         query = query,
+        typeFilter = typeFilter,
         onQueryChange = viewModel::onQueryChange,
         uiState = uiState,
         onBack = onBack,
-        onItemClick = onItemClick
+        onItemClick = onItemClick,
+        onSearchByTypeClick = onSearchByTypeClick,
+        onTypeClick = onTypeClick
     )
 }
 
 @Composable
-fun SearchScreenContent(
+fun CatalogScreenContent(
+    mode: CatalogMode,
     query: String,
+    typeFilter: String,
     onQueryChange: (String) -> Unit,
-    uiState: SearchUiState,
+    uiState: CatalogUiState,
     onBack: () -> Unit,
-    onItemClick: (String) -> Unit
+    onItemClick: (String) -> Unit,
+    onSearchByTypeClick: () -> Unit,
+    onTypeClick: (String) -> Unit
 ) {
+    val title = when (mode) {
+        CatalogMode.SEARCH -> "// поиск"
+        CatalogMode.TYPES_LIST -> "// типы данных"
+        CatalogMode.BY_TYPE -> "// тип: ${typeFilter.ifBlank { "все" }}"
+        CatalogMode.TOP_RATED -> "// топ рейтинг"
+        CatalogMode.LOWEST_RATED -> "// низкий рейтинг"
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -89,10 +108,12 @@ fun SearchScreenContent(
                             .clickable { onBack() }
                     )
                     Text(
-                        text = "// поиск",
+                        text = title,
                         style = MaterialTheme.typography.titleLarge,
                         color = TextPrimary,
-                        modifier = Modifier.align(Alignment.Center)
+                        modifier = Modifier.align(Alignment.Center),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -101,50 +122,63 @@ fun SearchScreenContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Поле ввода ──
-            OutlinedTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                placeholder = { Text("// введите запрос", color = TextMuted) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Outlined.Search,
-                        contentDescription = null,
-                        tint = TerminalGreen
-                    )
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(0.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = TerminalGreen,
-                    unfocusedBorderColor = LineColor,
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    cursorColor = TerminalGreen
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
+            // ── Поле поиска (только для SEARCH) ──
+            if (mode == CatalogMode.SEARCH) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    placeholder = { Text("// введите запрос", color = TextMuted) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = null,
+                            tint = TerminalGreen
+                        )
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(0.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = TerminalGreen,
+                        unfocusedBorderColor = LineColor,
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        cursorColor = TerminalGreen
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(26.dp))
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // ── Результаты ──
+            // ── Контент ──
             Box(modifier = Modifier.weight(1f)) {
                 when (val state = uiState) {
-                    is SearchUiState.Idle -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "// введите запрос для поиска",
-                                color = TextSecondary,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
+                    is CatalogUiState.Idle -> {
+                        if (mode == CatalogMode.SEARCH) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSearchByTypeClick() }
+                            ) {
+                                Text(
+                                    text = "тип данных",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = TextPrimary,
+                                    modifier = Modifier.align(Alignment.CenterStart)
+                                )
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                                    contentDescription = null,
+                                    tint = TextPrimary,
+                                    modifier = Modifier
+                                        .align(Alignment.CenterEnd)
+                                        .size(20.dp)
+                                )
+                            }
                         }
                     }
-                    is SearchUiState.Loading -> {
+                    is CatalogUiState.Loading -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
@@ -152,7 +186,7 @@ fun SearchScreenContent(
                             BlinkingCursor()
                         }
                     }
-                    is SearchUiState.Error -> {
+                    is CatalogUiState.Error -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
@@ -171,7 +205,21 @@ fun SearchScreenContent(
                             }
                         }
                     }
-                    is SearchUiState.Success -> {
+                    is CatalogUiState.TypesSuccess -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(vertical = 8.dp)
+                        ) {
+                            items(state.types, key = { it }) { type ->
+                                TypeRow(
+                                    type = type,
+                                    onClick = { onTypeClick(type) }
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
+                    }
+                    is CatalogUiState.Success -> {
                         if (state.items.isEmpty()) {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
@@ -189,7 +237,7 @@ fun SearchScreenContent(
                                 contentPadding = PaddingValues(vertical = 8.dp)
                             ) {
                                 items(state.items, key = { it.id }) { item ->
-                                    SearchItemRow(
+                                    CatalogItemRow(
                                         item = item,
                                         onClick = { onItemClick(item.id) }
                                     )
@@ -205,7 +253,51 @@ fun SearchScreenContent(
 }
 
 @Composable
-private fun SearchItemRow(
+private fun TypeRow(
+    type: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        // Рамка
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawRect(
+                color = LineColor,
+                topLeft = Offset.Zero,
+                size = size,
+                style = Stroke(width = Wire)
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = type.lowercase(),
+                style = MaterialTheme.typography.titleMedium,
+                color = TextPrimary
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                contentDescription = null,
+                tint = TextSecondary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun CatalogItemRow(
     item: Item,
     onClick: () -> Unit
 ) {
@@ -308,6 +400,23 @@ private fun SearchItemRow(
                     )
                 }
             }
+
+            // ── Рейтинг (для топ/низ) ──
+            if (item.averageRating > 0) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "★",
+                        color = TerminalGreen,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = "%.1f".format(item.averageRating),
+                        color = TextSecondary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(start = 2.dp)
+                    )
+                }
+            }
         }
     }
 }
@@ -319,20 +428,25 @@ private fun SearchItemRow(
     backgroundColor = 0xFF000000
 )
 @Composable
-fun SearchScreenPreview() {
+fun CatalogScreenPreview() {
     CodeboxTheme {
-        SearchScreenContent(
-            query = "kotlin",
+        CatalogScreenContent(
+            mode = CatalogMode.TYPES_LIST,
+            query = "",
+            typeFilter = "",
             onQueryChange = {},
-            uiState = SearchUiState.Success(
+            uiState = CatalogUiState.TypesSuccess(
                 listOf(
-                    Item(id = "1", name = "kotlin", type = "язык", symbol = "KT"),
-                    Item(id = "2", name = "python", type = "язык", symbol = "Py"),
-                    Item(id = "3", name = "devops", type = "профессия", iconKey = "cloud")
+                    "язык программирования",
+                    "профессия",
+                    "синтаксическая конструкция",
+                    "инструмент"
                 )
             ),
             onBack = {},
-            onItemClick = {}
+            onSearchByTypeClick = {},
+            onItemClick = {},
+            onTypeClick = {}
         )
     }
 }
