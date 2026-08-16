@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
-
 @HiltViewModel
 class ReviewFormViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -37,8 +36,9 @@ class ReviewFormViewModel @Inject constructor(
     private val reviewUserId: String = savedStateHandle.get<String>("userId")
         ?: Firebase.auth.currentUser?.uid
         ?: ""
+    private val currentUserId: String = Firebase.auth.currentUser?.uid ?: ""
 
-    val isReadOnly: Boolean = reviewUserId != Firebase.auth.currentUser?.uid
+    val isReadOnly: Boolean = reviewUserId != currentUserId
 
     private val _item = MutableStateFlow<Item?>(null)
     val item: StateFlow<Item?> = _item.asStateFlow()
@@ -51,6 +51,14 @@ class ReviewFormViewModel @Inject constructor(
 
     private val _authorAvatarUrl = MutableStateFlow("")
     val authorAvatarUrl: StateFlow<String> = _authorAvatarUrl.asStateFlow()
+
+    // ← ЛАЙКИ
+    private val _likeCount = MutableStateFlow(0)
+    val likeCount: StateFlow<Int> = _likeCount.asStateFlow()
+
+    private val _isLikedByMe = MutableStateFlow(false)
+    val isLikedByMe: StateFlow<Boolean> = _isLikedByMe.asStateFlow()
+
     init {
         load()
     }
@@ -60,7 +68,10 @@ class ReviewFormViewModel @Inject constructor(
             _item.value = itemRepository.getItemById(itemId)
             userReviewRepository.getReview(reviewUserId, itemId)?.let {
                 _review.value = it
+                _likeCount.value = it.countLikes
+                _isLikedByMe.value = it.likedBy.contains(currentUserId)
             }
+
             if (isReadOnly && reviewUserId.isNotBlank()) {
                 try {
                     val doc = FirebaseFirestore.getInstance()
@@ -71,7 +82,7 @@ class ReviewFormViewModel @Inject constructor(
                                 ?: ""
                 } catch (_: Exception) {
                     _authorName.value = reviewUserId.take(6)
-                _authorAvatarUrl.value = ""
+                    _authorAvatarUrl.value = ""
                 }
             }
         }
@@ -90,6 +101,28 @@ class ReviewFormViewModel @Inject constructor(
     fun saveReview() {
         if (isReadOnly) return
         viewModelScope.launch {
+            userReviewRepository.saveReview(_review.value)
+        }
+    }
+
+    // ← ПЕРЕКЛЮЧЕНИЕ ЛАЙКА
+    fun toggleLike() {
+        viewModelScope.launch {
+            val currentlyLiked = _isLikedByMe.value
+            val newCount = if (currentlyLiked) _likeCount.value - 1 else _likeCount.value + 1
+            val newLikedBy = if (currentlyLiked) {
+                _review.value.likedBy - currentUserId
+            } else {
+                _review.value.likedBy + currentUserId
+            }
+
+            _likeCount.value = newCount
+            _isLikedByMe.value = !currentlyLiked
+            _review.value = _review.value.copy(
+                countLikes = newCount,
+                likedBy = newLikedBy
+            )
+
             userReviewRepository.saveReview(_review.value)
         }
     }

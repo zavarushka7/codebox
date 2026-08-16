@@ -26,6 +26,7 @@ import com.example.codebox.presentation.catalog.CatalogScreen
 import com.example.codebox.presentation.common.WireBottomBar
 import com.example.codebox.presentation.details.DetailScreen
 import com.example.codebox.presentation.feed.FeedScreen
+import com.example.codebox.presentation.likes.LikesListScreen
 import com.example.codebox.presentation.profile.ProfileScreen
 
 import com.example.codebox.presentation.review_form.ReviewFormScreen
@@ -180,14 +181,14 @@ class MainActivity : ComponentActivity() {
                                     }
                                 )
                             ) { backStackEntry ->
-//                                val itemId = backStackEntry.arguments?.getString("itemId")
-//                                    ?: return@composable
-
                                 ReviewFormScreen(
                                     onBack = { navController.popBackStack() },
-                                    onAuthorClick = {  authorUserId ->
-                                        navController.navigate("profile/$authorUserId")},
-
+                                    onAuthorClick = { authorUserId ->
+                                        navController.navigate("profile/$authorUserId")
+                                    },
+                                    onShowLikes = { itemId, reviewUserId ->   // ← только для счётчика
+                                        navController.navigate("likes/$itemId/$reviewUserId")
+                                    }
                                 )
                             }
 
@@ -215,6 +216,21 @@ class MainActivity : ComponentActivity() {
                                     onBack = { navController.popBackStack()}
                                 )
                             }
+                            composable(
+                                route = "likes/{itemId}/{userId}",
+                                arguments = listOf(
+                                    navArgument("itemId") { type = NavType.StringType },
+                                    navArgument("userId") { type = NavType.StringType }
+                                )
+                            ) {
+                                LikesListScreen(
+                                    onBack = { navController.popBackStack() },
+                                    onUserClick = { clickedUserId ->
+                                        navController.navigate("profile/$clickedUserId")
+                                    }
+                                )
+                            }
+
 
                             composable("settings") {
                                 SettingsScreen(

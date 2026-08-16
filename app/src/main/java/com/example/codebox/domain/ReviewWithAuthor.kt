@@ -7,5 +7,6 @@ data class ReviewWithAuthor(
     val rating: Int = 0,
     val authorName: String = "",
     val avatarUrl: String = "",
-    val countLikes: Int = 0
+    val countLikes: Int = 0,
+    val likedBy: List<String>
 )

@@ -5,5 +5,6 @@ data class UserReview(
     val itemId: String = "",
     val comment: String = "",
     val rating: Int = 0,
-    val countLikes: Int = 0
+    val countLikes: Int = 0,
+    val likedBy: List<String> = emptyList()
 )

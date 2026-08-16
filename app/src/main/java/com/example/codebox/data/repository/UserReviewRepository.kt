@@ -14,21 +14,19 @@ class UserReviewRepository @Inject constructor(
 
     suspend fun getReview(userId: String, itemId: String): UserReview? {
         val doc = doc(userId, itemId).get().await()
-        return if (doc.exists()){
+        return if (doc.exists()) {
             UserReview(
                 userId = doc.getString("userId") ?: userId,
                 itemId = doc.getString("itemId") ?: itemId,
                 comment = doc.getString("comment") ?: "",
                 rating = doc.getLong("rating")?.toInt() ?: 0,
-                countLikes = doc.getLong("countLikes")?.toInt() ?: 0
-
+                countLikes = doc.getLong("countLikes")?.toInt() ?: 0,
+                likedBy = doc.get("likedBy") as? List<String> ?: emptyList() // ←
             )
         } else null
     }
 
-
-
-    suspend fun getAllReviewsForUser(userId: String): List<UserReview>{
+    suspend fun getAllReviewsForUser(userId: String): List<UserReview> {
         return firestore.collection("user_reviews")
             .whereEqualTo("userId", userId)
             .get()
@@ -40,20 +38,20 @@ class UserReviewRepository @Inject constructor(
                     itemId = doc.getString("itemId") ?: "",
                     comment = doc.getString("comment") ?: "",
                     rating = doc.getLong("rating")?.toInt() ?: 0,
-                    countLikes = doc.getLong("countLikes")?.toInt() ?: 0
-
+                    countLikes = doc.getLong("countLikes")?.toInt() ?: 0,
+                    likedBy = doc.get("likedBy") as? List<String> ?: emptyList() // ←
                 )
             }
     }
 
-
-    suspend fun getReviewsForItem(itemId: String): List<ReviewWithAuthor>{
+    suspend fun getReviewsForItem(itemId: String): List<ReviewWithAuthor> {
         val snapshot = firestore.collection("user_reviews")
             .whereEqualTo("itemId", itemId)
             .get()
             .await()
 
         if (snapshot.isEmpty) return emptyList()
+
         return snapshot.documents.mapNotNull { doc ->
             val userId = doc.getString("userId") ?: return@mapNotNull null
             val review = UserReview(
@@ -61,12 +59,15 @@ class UserReviewRepository @Inject constructor(
                 itemId = doc.getString("itemId") ?: "",
                 comment = doc.getString("comment") ?: "",
                 rating = doc.getLong("rating")?.toInt() ?: 0,
-                countLikes = doc.getLong("countLikes")?.toInt() ?: 0
+                countLikes = doc.getLong("countLikes")?.toInt() ?: 0,
+                likedBy = doc.get("likedBy") as? List<String> ?: emptyList() // ←
             )
-            // подтягиваем nickname из users/{uid}
+
             val userDoc = firestore.collection("users").document(userId).get().await()
             val nickname = userDoc.getString("nickname") ?: userId.take(6)
-            val avatarData = userDoc.getString("avatarBase64") ?: ""
+            val avatarData = userDoc.getString("avatarBase64")
+                ?: userDoc.getString("avatarUrl")
+                ?: ""
 
             ReviewWithAuthor(
                 userId = review.userId,
@@ -75,10 +76,12 @@ class UserReviewRepository @Inject constructor(
                 rating = review.rating,
                 authorName = nickname,
                 avatarUrl = avatarData,
-                countLikes = review.countLikes
+                countLikes = review.countLikes,
+                likedBy = review.likedBy // ← если добавили в ReviewWithAuthor
             )
         }
     }
+
     suspend fun getAverageRating(itemId: String): Double {
         val snapshot = firestore.collection("user_reviews")
             .whereEqualTo("itemId", itemId)
@@ -92,9 +95,17 @@ class UserReviewRepository @Inject constructor(
     }
 
     suspend fun saveReview(review: UserReview) {
-        doc(review.userId, review.itemId).set(review).await()
+        // ← явная Map — Firestore точно сохранит likedBy как массив
+        val data = hashMapOf(
+            "userId" to review.userId,
+            "itemId" to review.itemId,
+            "comment" to review.comment,
+            "rating" to review.rating,
+            "countLikes" to review.countLikes,
+            "likedBy" to review.likedBy
+        )
+        doc(review.userId, review.itemId).set(data).await()
 
-        // Пересчитываем и пишем в документ item
         val newAvg = getAverageRating(review.itemId)
         firestore.collection("items").document(review.itemId)
             .update("averageRating", newAvg)
@@ -104,7 +115,6 @@ class UserReviewRepository @Inject constructor(
     suspend fun deleteReview(userId: String, itemId: String) {
         doc(userId, itemId).delete().await()
 
-        // Пересчитываем после удаления
         val newAvg = getAverageRating(itemId)
         firestore.collection("items").document(itemId)
             .update("averageRating", newAvg)

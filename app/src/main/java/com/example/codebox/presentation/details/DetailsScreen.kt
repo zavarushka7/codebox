@@ -401,7 +401,10 @@ fun DetailScreenPreview() {
                     itemId = "1",
                     comment = "корутины — топ",
                     rating = 5,
-                    authorName = "codeNinja"
+                    authorName = "codeNinja",
+                    avatarUrl = TODO(),
+                    countLikes = TODO(),
+                    likedBy = TODO(),
                 )
             ),
             myReview = UserReview(userId = "u1", itemId = "1", comment = "класс", rating = 4),
