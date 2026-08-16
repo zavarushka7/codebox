@@ -32,6 +32,7 @@ import com.example.codebox.domain.ReviewWithAuthor
 import com.example.codebox.domain.TextCaseStyle
 import com.example.codebox.domain.UserReview
 import com.example.codebox.presentation.common.*
+import com.example.codebox.presentation.components.AvatarImage
 import com.example.codebox.presentation.theme.*
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
@@ -331,13 +332,21 @@ fun PublicReviewRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
-            ) {
+            ) {           Row(verticalAlignment = Alignment.CenterVertically) {
+                AvatarImage(
+                    avatarData = review.avatarUrl,
+                    nickname = review.authorName,
+                    modifier = Modifier.size(30.dp)
+                        .clickable{ onAuthorClick() }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = review.authorName,
                     style = MaterialTheme.typography.titleMedium,
                     color = if (isCurrentUser) TerminalGreen else TextPrimary,
                     modifier = Modifier.clickable { onAuthorClick() }
                 )
+            }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "★".repeat(review.rating),

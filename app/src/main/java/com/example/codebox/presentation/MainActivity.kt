@@ -182,8 +182,12 @@ class MainActivity : ComponentActivity() {
                             ) { backStackEntry ->
 //                                val itemId = backStackEntry.arguments?.getString("itemId")
 //                                    ?: return@composable
+
                                 ReviewFormScreen(
-                                    onBack = { navController.popBackStack() }
+                                    onBack = { navController.popBackStack() },
+                                    onAuthorClick = {  authorUserId ->
+                                        navController.navigate("profile/$authorUserId")},
+
                                 )
                             }
 
@@ -208,7 +212,7 @@ class MainActivity : ComponentActivity() {
                                     onSettingsClick = {
                                         navController.navigate("settings")
                                     },
-
+                                    onBack = { navController.popBackStack()}
                                 )
                             }
 

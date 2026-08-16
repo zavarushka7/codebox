@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -28,6 +29,7 @@ import com.example.codebox.domain.Item
 import com.example.codebox.domain.TextCaseStyle
 import com.example.codebox.domain.UserReview
 import com.example.codebox.presentation.common.*
+import com.example.codebox.presentation.components.AvatarImage
 import com.example.codebox.presentation.theme.*
 
 private val Hairline = 2.5f
@@ -36,6 +38,7 @@ private val LineColor = Color(0xFF777777)
 @Composable
 fun ReviewFormScreen(
     onBack: () -> Unit,
+    onAuthorClick: (String) -> Unit,
     viewModel: ReviewFormViewModel = hiltViewModel()
 ) {
     val item by viewModel.item.collectAsStateWithLifecycle()
@@ -43,6 +46,7 @@ fun ReviewFormScreen(
     val authorName by viewModel.authorName.collectAsStateWithLifecycle()
     val caseStyle by viewModel.textCaseStyle.collectAsStateWithLifecycle()
     val isReadOnly = viewModel.isReadOnly
+    val authorAvatarUrl by viewModel.authorAvatarUrl.collectAsStateWithLifecycle()
 
     if (item == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -52,6 +56,7 @@ fun ReviewFormScreen(
     }
 
     ReviewFormContent(
+        authorAvatarUrl = authorAvatarUrl,
         caseStyle = caseStyle,
         item = item!!,
         review = review,
@@ -63,12 +68,14 @@ fun ReviewFormScreen(
             viewModel.saveReview()
             onBack()
         },
-        onBack = onBack
+        onBack = onBack,
+        onAuthorClick = onAuthorClick
     )
 }
 
 @Composable
 fun ReviewFormContent(
+    authorAvatarUrl: String = "",
     caseStyle: TextCaseStyle,
     item: Item,
     review: UserReview,
@@ -77,7 +84,9 @@ fun ReviewFormContent(
     onCommentChange: (String) -> Unit,
     onRatingChange: (Int) -> Unit,
     onSave: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onAuthorClick: (String) -> Unit,
+
 ) {
     Column(
         modifier = Modifier
@@ -100,7 +109,7 @@ fun ReviewFormContent(
                         .clickable { onBack() }
                 )
                 Text(
-                    text = if (isReadOnly) "// ревью".toDisplayCase(caseStyle) else "// оценить".toDisplayCase(caseStyle),
+                    text = if (isReadOnly) "// ревью ${authorName}".toDisplayCase(caseStyle) else "// оценить".toDisplayCase(caseStyle),
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     modifier = Modifier.align(Alignment.Center)
@@ -121,64 +130,39 @@ fun ReviewFormContent(
             HorizontalLine(strokeWidth = Hairline)
         }
 
+
         Spacer(modifier = Modifier.height(16.dp))
 
         if (isReadOnly) {
-            Text(
-                text = "// автор: ${authorName}",
-                style = MaterialTheme.typography.labelSmall,
-                color = TextMuted
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
+            Row(modifier = Modifier  .clickable{ onAuthorClick(review.userId) },
+                verticalAlignment = Alignment.CenterVertically) {
+                AvatarImage(
+                    avatarData = authorAvatarUrl,
+                    nickname = authorName,
+                    modifier = Modifier.size(30.dp)
 
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = authorName,
+                style = MaterialTheme.typography.titleMedium,
+                color = TextPrimary
+            )
+                }
+
+        }
+        Spacer(modifier = Modifier.height(20.dp))
         Text(
             text = item.name,
-            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineSmall,
             color = TextPrimary
         )
-        if (item.description.isNotBlank()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = item.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-        HorizontalLine(strokeWidth = Hairline)
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp)
+            .clickable { onBack()})
 
         Text(
-            text = if (isReadOnly) "// comment: String?" else "// my_comment: String?",
-            style = MaterialTheme.typography.labelSmall,
-            color = TextMuted
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        OutlinedTextField(
-            value = review.comment,
-            onValueChange = onCommentChange,
-            enabled = !isReadOnly,
-            minLines = 3,
-            shape = RoundedCornerShape(0.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = TerminalGreen,
-                unfocusedBorderColor = LineColor,
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary,
-                disabledBorderColor = LineColor,
-                disabledTextColor = TextSecondary
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = if (isReadOnly) "// rating: Int (1..5)" else "// my_rating: Int (1..5)",
+            text = if (isReadOnly) "// rating: Int" else "// my_rating: Int",
             style = MaterialTheme.typography.labelSmall,
             color = TextMuted
         )
@@ -213,6 +197,34 @@ fun ReviewFormContent(
                 color = TextMuted
             )
         }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = if (isReadOnly) "// comment: String?" else "// my_comment: String?",
+            style = MaterialTheme.typography.labelSmall,
+            color = TextMuted
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        OutlinedTextField(
+            value = review.comment,
+            onValueChange = onCommentChange,
+            enabled = !isReadOnly,
+            minLines = 3,
+            shape = RoundedCornerShape(0.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = TerminalGreen,
+                unfocusedBorderColor = LineColor,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedTextColor = TextPrimary,
+                unfocusedTextColor = TextPrimary,
+                disabledBorderColor = LineColor,
+                disabledTextColor = TextSecondary
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+
 
 
     }
@@ -246,7 +258,9 @@ fun ReviewFormPreview() {
             onSave = {},
             onBack = {},
             authorName = "glofko",
-            isReadOnly = true
+            isReadOnly = true,
+            authorAvatarUrl = "",
+            onAuthorClick = {}
         )
     }
 }

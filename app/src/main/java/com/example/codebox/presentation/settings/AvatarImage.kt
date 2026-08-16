@@ -17,7 +17,7 @@ import com.example.codebox.presentation.common.WireAvatar
 fun AvatarImage(
     avatarData: String,
     nickname: String,
-    modifier: Modifier = Modifier.size(100.dp)
+    modifier: Modifier
 ) {
     when {
         avatarData.isBlank() -> {

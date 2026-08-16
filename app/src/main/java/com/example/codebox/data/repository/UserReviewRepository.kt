@@ -19,7 +19,9 @@ class UserReviewRepository @Inject constructor(
                 userId = doc.getString("userId") ?: userId,
                 itemId = doc.getString("itemId") ?: itemId,
                 comment = doc.getString("comment") ?: "",
-                rating = doc.getLong("rating")?.toInt() ?: 0
+                rating = doc.getLong("rating")?.toInt() ?: 0,
+                countLikes = doc.getLong("countLikes")?.toInt() ?: 0
+
             )
         } else null
     }
@@ -37,7 +39,9 @@ class UserReviewRepository @Inject constructor(
                     userId = doc.getString("userId") ?: "",
                     itemId = doc.getString("itemId") ?: "",
                     comment = doc.getString("comment") ?: "",
-                    rating = doc.getLong("rating")?.toInt() ?: 0
+                    rating = doc.getLong("rating")?.toInt() ?: 0,
+                    countLikes = doc.getLong("countLikes")?.toInt() ?: 0
+
                 )
             }
     }
@@ -56,18 +60,22 @@ class UserReviewRepository @Inject constructor(
                 userId = userId,
                 itemId = doc.getString("itemId") ?: "",
                 comment = doc.getString("comment") ?: "",
-                rating = doc.getLong("rating")?.toInt() ?: 0
+                rating = doc.getLong("rating")?.toInt() ?: 0,
+                countLikes = doc.getLong("countLikes")?.toInt() ?: 0
             )
             // подтягиваем nickname из users/{uid}
             val userDoc = firestore.collection("users").document(userId).get().await()
             val nickname = userDoc.getString("nickname") ?: userId.take(6)
+            val avatarData = userDoc.getString("avatarBase64") ?: ""
 
             ReviewWithAuthor(
                 userId = review.userId,
                 itemId = review.itemId,
                 comment = review.comment,
                 rating = review.rating,
-                authorName = nickname
+                authorName = nickname,
+                avatarUrl = avatarData,
+                countLikes = review.countLikes
             )
         }
     }

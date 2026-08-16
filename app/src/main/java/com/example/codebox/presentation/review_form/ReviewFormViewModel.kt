@@ -49,6 +49,8 @@ class ReviewFormViewModel @Inject constructor(
     private val _authorName = MutableStateFlow("")
     val authorName: StateFlow<String> = _authorName.asStateFlow()
 
+    private val _authorAvatarUrl = MutableStateFlow("")
+    val authorAvatarUrl: StateFlow<String> = _authorAvatarUrl.asStateFlow()
     init {
         load()
     }
@@ -64,8 +66,12 @@ class ReviewFormViewModel @Inject constructor(
                     val doc = FirebaseFirestore.getInstance()
                         .collection("users").document(reviewUserId).get().await()
                     _authorName.value = doc.getString("nickname") ?: reviewUserId.take(6)
+                    _authorAvatarUrl.value = doc.getString("avatarBase64")
+                        ?: doc.getString("avatarUrl")
+                                ?: ""
                 } catch (_: Exception) {
                     _authorName.value = reviewUserId.take(6)
+                _authorAvatarUrl.value = ""
                 }
             }
         }

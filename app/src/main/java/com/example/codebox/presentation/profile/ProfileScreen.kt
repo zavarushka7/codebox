@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +50,7 @@ fun ProfileScreen(
     onEditReviewClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel(),
+    onBack: () -> Unit
 
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -70,7 +68,8 @@ fun ProfileScreen(
         onEditReviewClick = onEditReviewClick,
         onShowDeleteConfirm = { showDeleteConfirm = it },
         onSettingsClick = onSettingsClick,
-        isReadOnly = isReadOnly
+        isReadOnly = isReadOnly,
+        onBack = onBack
 
     )
     if (showDeleteConfirm != null) {
@@ -94,7 +93,8 @@ fun ProfileScreenContent(
     onEditReviewClick: (String) -> Unit,
     onShowDeleteConfirm: (ReviewWithItem) -> Unit,
     onSettingsClick: () -> Unit,
-    isReadOnly: Boolean
+    isReadOnly: Boolean,
+    onBack: () -> Unit
 
     ) {
     Box(
@@ -113,6 +113,15 @@ fun ProfileScreenContent(
                     .padding(top = 32.dp, bottom = 12.dp)
             ) {
                 Box(modifier = Modifier.fillMaxWidth()) {
+                    if (isReadOnly){
+                        Text(
+                            text = "< назад",
+                            color = TerminalGreen,
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .clickable { onBack() }
+                        )
+                    }
                     Text(
                         text = "// профиль".toDisplayCase(caseStyle),
                         style = MaterialTheme.typography.titleLarge,
@@ -541,7 +550,8 @@ fun ProfileScreenPreview() {
             onSettingsClick = {},
             onEditReviewClick = {},
             caseStyle = TextCaseStyle.NORMAL,
-            isReadOnly = false
+            isReadOnly = false,
+            onBack = {}
         )
     }
 }

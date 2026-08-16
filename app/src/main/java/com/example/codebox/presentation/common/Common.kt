@@ -1,10 +1,12 @@
 package com.example.codebox.presentation.common
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -199,9 +202,23 @@ fun AvgRatingChip(rating: Double) {
     }
 }
 
+
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
-fun WireAvatar(initial: String, modifier: Modifier = Modifier) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+fun WireAvatar(
+    initial: String,
+    modifier: Modifier = Modifier
+) {
+    BoxWithConstraints(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        // шрифт = 45% от меньшей стороны контейнера
+        val minSizeDp = minOf(maxWidth, maxHeight)
+        val fontSize = with(LocalDensity.current) {
+            (minSizeDp.value * 0.45f).toInt().sp
+        }
+
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
@@ -216,10 +233,12 @@ fun WireAvatar(initial: String, modifier: Modifier = Modifier) {
             drawLine(LineColor, Offset(w - c, h), Offset(w, h), Accent)
             drawLine(LineColor, Offset(w, h - c), Offset(w, h), Accent)
         }
+
         Text(
             text = initial,
             color = TerminalGreen,
-            style = MaterialTheme.typography.displaySmall
+            fontSize = fontSize,
+            style = MaterialTheme.typography.titleMedium.copy(fontSize = fontSize)
         )
     }
 }
