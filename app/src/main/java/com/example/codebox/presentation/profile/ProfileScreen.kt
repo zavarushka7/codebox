@@ -37,6 +37,7 @@ import com.example.codebox.domain.UserReview
 import com.example.codebox.presentation.components.AvatarImage
 import com.example.codebox.presentation.common.*
 import com.example.codebox.presentation.theme.*
+import com.google.firestore.v1.TransactionOptions
 
 private val Hairline = 2.5f
 private val Wire = 1.5f
@@ -47,16 +48,17 @@ private val StarEmpty = Color(0xFF333333)
 
 @Composable
 fun ProfileScreen(
+    userId: String? = null,
     onReviewClick: (String) -> Unit,
     onEditReviewClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel(),
-    onFeedClick: () -> Unit,
-    onSearchClick: () -> Unit,
+
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val caseStyle by viewModel.textCaseStyle.collectAsStateWithLifecycle()
     var showDeleteConfirm by remember { mutableStateOf<ReviewWithItem?>(null) }
+    val isReadOnly = viewModel.isReadOnly
 
     LaunchedEffect(Unit) {
         viewModel.loadProfile()
@@ -68,6 +70,7 @@ fun ProfileScreen(
         onEditReviewClick = onEditReviewClick,
         onShowDeleteConfirm = { showDeleteConfirm = it },
         onSettingsClick = onSettingsClick,
+        isReadOnly = isReadOnly
 
     )
     if (showDeleteConfirm != null) {
@@ -91,6 +94,7 @@ fun ProfileScreenContent(
     onEditReviewClick: (String) -> Unit,
     onShowDeleteConfirm: (ReviewWithItem) -> Unit,
     onSettingsClick: () -> Unit,
+    isReadOnly: Boolean
 
     ) {
     Box(
@@ -115,15 +119,18 @@ fun ProfileScreenContent(
                         color = TextPrimary,
                         modifier = Modifier.align(Alignment.Center)
                     )
-                    Icon(
-                        imageVector = Icons.Outlined.Settings,
-                        contentDescription = "настройки",
-                        tint = TextSecondary,
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .size(24.dp)
-                            .clickable { onSettingsClick() }
-                    )
+                    if (!isReadOnly){
+                        Icon(
+                            imageVector = Icons.Outlined.Settings,
+                            contentDescription = "настройки",
+                            tint = TextSecondary,
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .size(24.dp)
+                                .clickable { onSettingsClick() }
+                        )
+                    }
+
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalLine(strokeWidth = Hairline)
@@ -163,7 +170,8 @@ fun ProfileScreenContent(
                             onReviewClick = onReviewClick,
                             onShowDeleteConfirm = onShowDeleteConfirm,
                             onEditReviewClick = onEditReviewClick,
-                            caseStyle = caseStyle
+                            caseStyle = caseStyle,
+                            isReadOnly = isReadOnly
                         )
                     }
                 }
@@ -172,61 +180,8 @@ fun ProfileScreenContent(
     }
 }
 
-@Composable
-fun WireBottomBar(
-    currentTab: String,
-    onFeed: () -> Unit,
-    onSearch: () -> Unit,
-    onProfile: () -> Unit
-) {
-    Column {
-        HorizontalLine()
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(78.dp)
-                .background(PureBlack),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            BottomNavIcon(
-                icon = androidx.compose.material.icons.Icons.Outlined.Home,
-                label = "feed",
-                selected = currentTab == "feed",
-                onClick = onFeed
-            )
-            BottomNavIcon(
-                icon = androidx.compose.material.icons.Icons.Outlined.Search,
-                label = "search",
-                selected = currentTab == "search",
-                onClick = onSearch
-            )
-            BottomNavIcon(
-                icon = androidx.compose.material.icons.Icons.Outlined.Person,
-                label = "profile",
-                selected = currentTab == "profile",
-                onClick = onProfile
-            )
-        }
-    }
-}
 
-@Composable
-private fun BottomNavIcon(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Icon(
-        imageVector = icon,
-        contentDescription = label,
-        tint = if (selected) TerminalGreen else TextSecondary,
-        modifier = Modifier
-            .size(24.dp)
-            .clickable(onClick = onClick)
-    )
-}
+
 
 @Composable
 fun DeleteConfirmDialog(
@@ -318,6 +273,7 @@ private fun ProfileBody(
     onEditReviewClick: (String) -> Unit,
     onShowDeleteConfirm: (ReviewWithItem) -> Unit,
     caseStyle: TextCaseStyle,
+    isReadOnly: Boolean
 ) {
     var expanded by remember { mutableStateOf(false) }
     Column(
@@ -389,7 +345,7 @@ private fun ProfileBody(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "// мои ревью".toDisplayCase(caseStyle),
+            text = if (!isReadOnly) "// мои ревью".toDisplayCase(caseStyle) else "// ревью".toDisplayCase(caseStyle),
             style = MaterialTheme.typography.titleMedium,
             color = TextMuted,
             modifier = Modifier.align(Alignment.Start)
@@ -410,7 +366,8 @@ private fun ProfileBody(
                     rw = rw,
                     onCardClick = { onReviewClick(rw.review.itemId) },
                     onEditClick = { onEditReviewClick(rw.review.itemId) },
-                    onDeleteClick = { onShowDeleteConfirm(rw) }
+                    onDeleteClick = { onShowDeleteConfirm(rw) },
+                    isReadOnly = isReadOnly
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
@@ -423,7 +380,8 @@ fun ReviewWireRow(
     rw: ReviewWithItem,
     onCardClick: () -> Unit,
     onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    isReadOnly: Boolean
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -506,28 +464,30 @@ fun ReviewWireRow(
                         .padding(top = 4.dp),
                     horizontalAlignment = Alignment.End
                 ) {
-                    Text(
-                        text = "редактировать",
-                        color = TerminalGreen,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier
-                            .clickable {
-                                expanded = false
-                                onEditClick()
-                            }
-                            .padding(vertical = 2.dp)
-                    )
-                    Text(
-                        text = "удалить",
-                        color = TextSecondary,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier
-                            .clickable {
-                                expanded = false
-                                onDeleteClick()
-                            }
-                            .padding(vertical = 2.dp)
-                    )
+                    if (!isReadOnly) {
+                        Text(
+                            text = "редактировать",
+                            color = TerminalGreen,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier
+                                .clickable {
+                                    expanded = false
+                                    onEditClick()
+                                }
+                                .padding(vertical = 2.dp)
+                        )
+                        Text(
+                            text = "удалить",
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier
+                                .clickable {
+                                    expanded = false
+                                    onDeleteClick()
+                                }
+                                .padding(vertical = 2.dp)
+                        )
+                    }
                 }
             }
         }
@@ -580,7 +540,8 @@ fun ProfileScreenPreview() {
             onShowDeleteConfirm = {},
             onSettingsClick = {},
             onEditReviewClick = {},
-            caseStyle = TextCaseStyle.NORMAL
+            caseStyle = TextCaseStyle.NORMAL,
+            isReadOnly = false
         )
     }
 }

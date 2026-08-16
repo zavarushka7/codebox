@@ -23,14 +23,15 @@ import androidx.navigation.navArgument
 import com.example.codebox.presentation.auth.LoginScreen
 import com.example.codebox.presentation.catalog.CatalogMode
 import com.example.codebox.presentation.catalog.CatalogScreen
+import com.example.codebox.presentation.common.WireBottomBar
 import com.example.codebox.presentation.details.DetailScreen
 import com.example.codebox.presentation.feed.FeedScreen
 import com.example.codebox.presentation.profile.ProfileScreen
-import com.example.codebox.presentation.profile.WireBottomBar
+
 import com.example.codebox.presentation.review_form.ReviewFormScreen
 import com.example.codebox.presentation.settings.SettingsScreen
 import com.example.codebox.presentation.theme.CodeboxTheme
-import com.example.codebox.presentation.user_profile.UserProfileScreen
+
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import dagger.hilt.android.AndroidEntryPoint
@@ -61,13 +62,13 @@ class MainActivity : ComponentActivity() {
                         currentRoute?.startsWith("review_form") == true -> "feed"
                         currentRoute?.startsWith("profile") == true -> "profile"
                         currentRoute?.startsWith("settings") == true -> "profile"
-                        currentRoute?.startsWith("user_profile") == true -> "profile"
                         currentRoute?.startsWith("catalog") == true -> "search"
                         else -> "feed"
                     }
 
                     Scaffold(
                         bottomBar = {
+                            val currentUserId = Firebase.auth.currentUser?.uid ?: ""
                             WireBottomBar(
                                 currentTab = currentTab,
                                 onFeed = {
@@ -83,8 +84,8 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onProfile = {
                                     if (currentTab != "profile") {
-                                        navController.navigate("profile") {
-                                            popUpTo("profile") { inclusive = true }
+                                        navController.navigate("profile/$currentUserId") {
+                                            popUpTo("feed") { inclusive = true }
                                             launchSingleTop = true
                                         }
                                     }
@@ -118,12 +119,9 @@ class MainActivity : ComponentActivity() {
                                         navController.navigate("review_form/$itemId")
                                     },
                                     onReviewAuthorClick = { authorUserId ->
-                                        val currentUserId = Firebase.auth.currentUser?.uid
-                                        if (authorUserId == currentUserId) {
-                                            navController.navigate("profile")
-                                        } else {
-                                            navController.navigate("user_profile/$authorUserId")
-                                        }
+
+                                        navController.navigate("profile/$authorUserId")
+
                                     },
                                     onReviewClick = { _, authorUserId ->
                                         navController.navigate("review_form/$itemId?userId=$authorUserId")
@@ -182,15 +180,25 @@ class MainActivity : ComponentActivity() {
                                     }
                                 )
                             ) { backStackEntry ->
-                                val itemId = backStackEntry.arguments?.getString("itemId")
-                                    ?: return@composable
+//                                val itemId = backStackEntry.arguments?.getString("itemId")
+//                                    ?: return@composable
                                 ReviewFormScreen(
                                     onBack = { navController.popBackStack() }
                                 )
                             }
 
-                            composable("profile") {
+                            composable(
+                                route = "profile/{userId}",
+                                arguments = listOf(navArgument("userId"){
+                                    type = NavType.StringType
+                                    nullable = true
+                                    defaultValue = null
+                                }
+                            ) ){
+                                backStackEntry ->
+                                val userId = backStackEntry.arguments?.getString("userId")
                                 ProfileScreen(
+                                    userId = userId,
                                     onReviewClick = { itemId ->
                                         navController.navigate("detail/$itemId")
                                     },
@@ -200,10 +208,7 @@ class MainActivity : ComponentActivity() {
                                     onSettingsClick = {
                                         navController.navigate("settings")
                                     },
-                                    onFeedClick = { navController.navigate("feed") },
-                                    onSearchClick = {
-                                        navController.navigate("catalog/${CatalogMode.SEARCH.name}")
-                                    }
+
                                 )
                             }
 
@@ -217,17 +222,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
-                            composable("user_profile/{userId}") { backStackEntry ->
-                                val userId = backStackEntry.arguments?.getString("userId")
-                                    ?: return@composable
-                                UserProfileScreen(
-                                    userId = userId,
-                                    onBack = { navController.popBackStack() },
-                                    onItemClick = { itemId ->
-                                        navController.navigate("detail/$itemId")
-                                    }
-                                )
-                            }
+
                         }
                     }
                 }

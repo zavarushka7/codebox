@@ -1,8 +1,11 @@
 package com.example.codebox.presentation.common
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,6 +14,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,6 +38,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.codebox.domain.TextCaseStyle
+import com.example.codebox.presentation.theme.PureBlack
 import com.example.codebox.presentation.theme.TerminalGreen
 import com.example.codebox.presentation.theme.TextPrimary
 import com.example.codebox.presentation.theme.TextSecondary
@@ -94,6 +102,45 @@ fun HorizontalLine(
             end = Offset(size.width, size.height / 2),
             strokeWidth = strokeWidth
         )
+    }
+}
+
+@Composable
+fun WireBottomBar(
+    currentTab: String,
+    onFeed: () -> Unit,
+    onSearch: () -> Unit,
+    onProfile: () -> Unit
+) {
+    Column {
+        HorizontalLine()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(78.dp)
+                .background(PureBlack),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            BottomNavIcon(
+                icon = Icons.Outlined.Home,
+                label = "feed",
+                selected = currentTab == "feed",
+                onClick = onFeed
+            )
+         BottomNavIcon(
+                icon = Icons.Outlined.Search,
+                label = "search",
+                selected = currentTab == "search",
+                onClick = onSearch
+            )
+            BottomNavIcon(
+                icon = Icons.Outlined.Person,
+                label = "profile",
+                selected = currentTab == "profile",
+                onClick = onProfile
+            )
+        }
     }
 }
 @Composable

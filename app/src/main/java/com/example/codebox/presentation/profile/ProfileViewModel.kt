@@ -1,5 +1,6 @@
 package com.example.codebox.presentation.profile
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.codebox.data.repository.ItemRepository
@@ -22,6 +23,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     private val userReviewRepository: UserReviewRepository,
     private val itemRepository: ItemRepository,
     private val firestore: FirebaseFirestore,
@@ -33,25 +35,24 @@ class ProfileViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<ProfileUiState>(ProfileUiState.Loading)
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
+    private val profileUserId: String = savedStateHandle.get<String>("userId")
+        ?: Firebase.auth.currentUser?.uid
+        ?: ""
+    val isReadOnly: Boolean = profileUserId != Firebase.auth.currentUser?.uid
 
     fun loadProfile() {
         viewModelScope.launch {
             _uiState.value = ProfileUiState.Loading
             try {
-                val user = Firebase.auth.currentUser
-                if (user == null) {
-                    _uiState.value = ProfileUiState.Error("Пользователь не авторизован")
-                    return@launch
-                }
+                val userDoc = firestore.collection("users").document(profileUserId).get().await()
 
-                val userDoc = firestore.collection("users").document(user.uid).get().await()
                 val nickname = userDoc.getString("nickname")
-                    ?: user.displayName
-                    ?: user.email?.substringBefore("@")
-                    ?: "какой же у тебя ник, бро?"
+                    ?: userDoc.getString("displayName")
+                    ?: "пользователь"
 
-                val reviews = userReviewRepository.getAllReviewsForUser(user.uid)
+                val reviews = userReviewRepository.getAllReviewsForUser(profileUserId)
                 val description = userDoc.getString("description") ?: ""
+
                 val reviewsWithItems = reviews.map { review ->
                     val item = itemRepository.getItemById(review.itemId)
                     ReviewWithItem(
@@ -60,10 +61,15 @@ class ProfileViewModel @Inject constructor(
                     )
                 }
 
-                val avatarUrl = userDoc.getString("avatarBase64") ?: userDoc.getString("avatarUrl") ?: ""
+                val avatarUrl = userDoc.getString("avatarBase64")
+                    ?: userDoc.getString("avatarUrl")
+                    ?: ""
+
+                // Email берём из документа, т.к. у чужого профиля нет FirebaseUser
+                val email = userDoc.getString("email") ?: ""
 
                 _uiState.value = ProfileUiState.Success(
-                    email = user.email ?: "",
+                    email = email,
                     nickname = nickname,
                     avatarUrl = avatarUrl,
                     description = description,
