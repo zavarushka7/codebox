@@ -3,15 +3,19 @@ package com.example.codebox.presentation.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.codebox.data.repository.ItemRepository
+import com.example.codebox.data.repository.SettingsRepository
 import com.example.codebox.data.repository.UserReviewRepository
 import com.example.codebox.domain.ReviewWithItem
+import com.example.codebox.domain.TextCaseStyle
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -20,13 +24,15 @@ import javax.inject.Inject
 class ProfileViewModel @Inject constructor(
     private val userReviewRepository: UserReviewRepository,
     private val itemRepository: ItemRepository,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    settingsRepository: SettingsRepository
 ) : ViewModel() {
+
+    val textCaseStyle: StateFlow<TextCaseStyle> = settingsRepository.textCaseStyle
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TextCaseStyle.NORMAL)
 
     private val _uiState = MutableStateFlow<ProfileUiState>(ProfileUiState.Loading)
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
-
-
 
     fun loadProfile() {
         viewModelScope.launch {
@@ -54,14 +60,13 @@ class ProfileViewModel @Inject constructor(
                     )
                 }
 
-                // внутри loadProfile, где собираешь Success:
                 val avatarUrl = userDoc.getString("avatarBase64") ?: userDoc.getString("avatarUrl") ?: ""
 
                 _uiState.value = ProfileUiState.Success(
                     email = user.email ?: "",
                     nickname = nickname,
-                    avatarUrl = avatarUrl,   // теперь здесь Base64 или пусто
-                    description = userDoc.getString("description") ?: "",
+                    avatarUrl = avatarUrl,
+                    description = description,
                     reviews = reviewsWithItems
                 )
             } catch (e: Exception) {
@@ -70,15 +75,13 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-
-
-    fun deleteReview(itemId: String){
+    fun deleteReview(itemId: String) {
         viewModelScope.launch {
             try {
                 val userId = Firebase.auth.currentUser?.uid ?: return@launch
                 userReviewRepository.deleteReview(userId, itemId)
                 loadProfile()
-            } catch (e: Exception){
+            } catch (e: Exception) {
                 _uiState.value = ProfileUiState.Error("Не удалось удалить: ${e.message}")
             }
         }

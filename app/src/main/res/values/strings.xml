@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">codebox</string>
+    <string name="codebox_auth">// codebox auth</string>
 </resources>

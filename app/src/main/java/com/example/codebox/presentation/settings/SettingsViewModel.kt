@@ -2,7 +2,6 @@ package com.example.codebox.presentation.settings
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.MediaStore
 import android.util.Base64
@@ -10,11 +9,16 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.codebox.data.repository.SettingsRepository
+import com.example.codebox.domain.TextCaseStyle
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.io.ByteArrayOutputStream
@@ -22,8 +26,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
+
+    val textCaseStyle: StateFlow<TextCaseStyle> = settingsRepository.textCaseStyle
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TextCaseStyle.NORMAL)
 
     private val user = Firebase.auth.currentUser
     private val uid = user?.uid ?: ""
@@ -52,12 +60,18 @@ class SettingsViewModel @Inject constructor(
                 try {
                     val doc = firestore.collection("users").document(uid).get().await()
                     _nickname.value = doc.getString("nickname") ?: user?.displayName ?: ""
-                    _description.value = doc.getString("description") ?: ""   // ← вот это
+                    _description.value = doc.getString("description") ?: ""
                     _avatarUrl.value = doc.getString("avatarBase64") ?: doc.getString("avatarUrl") ?: ""
                 } catch (_: Exception) {
                     _nickname.value = user?.displayName ?: ""
                 }
             }
+        }
+    }
+
+    fun setTextCaseStyle(style: TextCaseStyle) {
+        viewModelScope.launch {
+            settingsRepository.setTextCaseStyle(style)
         }
     }
 
@@ -123,7 +137,7 @@ class SettingsViewModel @Inject constructor(
             try {
                 val data = hashMapOf(
                     "nickname" to _nickname.value,
-                    "description" to _description.value   // ← сохраняем описание
+                    "description" to _description.value
                 )
                 firestore.collection("users").document(uid)
                     .set(data, SetOptions.merge())

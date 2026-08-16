@@ -25,8 +25,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.codebox.domain.Item
-import com.example.codebox.presentation.theme.*
+import com.example.codebox.domain.TextCaseStyle
 import com.example.codebox.presentation.common.*
+import com.example.codebox.presentation.theme.*
 
 private val Hairline = 2.5f
 private val Wire = 1.5f
@@ -40,18 +41,20 @@ fun FeedScreen(
     viewModel: FeedViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val caseStyle by viewModel.textCaseStyle.collectAsStateWithLifecycle()
+
     FeedScreenContent(
+        caseStyle = caseStyle,
         uiState = uiState,
         onItemClick = onItemClick,
-
     )
 }
 
 @Composable
 fun FeedScreenContent(
+    caseStyle: TextCaseStyle,
     uiState: FeedUiState,
     onItemClick: (String) -> Unit,
-
 ) {
     Box(
         modifier = Modifier
@@ -63,7 +66,6 @@ fun FeedScreenContent(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            // ── Шапка ──
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -78,7 +80,6 @@ fun FeedScreenContent(
                 HorizontalLine(strokeWidth = Hairline)
             }
 
-            // ── Контент ──
             Box(modifier = Modifier.weight(1f)) {
                 when (val state = uiState) {
                     is FeedUiState.Loading -> {
@@ -103,7 +104,10 @@ fun FeedScreenContent(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("// no items", color = TextSecondary)
+                                Text(
+                                    text = "// no items".toDisplayCase(caseStyle),
+                                    color = TextSecondary
+                                )
                             }
                         } else {
                             LazyColumn(
@@ -113,6 +117,7 @@ fun FeedScreenContent(
                                 items(state.items, key = { it.id }) { item ->
                                     ItemWireRow(
                                         item = item,
+                                        caseStyle = caseStyle,
                                         onClick = { onItemClick(item.id) }
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -127,7 +132,11 @@ fun FeedScreenContent(
 }
 
 @Composable
-fun ItemWireRow(item: Item, onClick: () -> Unit) {
+fun ItemWireRow(
+    item: Item,
+    caseStyle: TextCaseStyle,
+    onClick: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -196,7 +205,6 @@ fun ItemWireRow(item: Item, onClick: () -> Unit) {
                         )
                     }
                     else -> {
-                        // fallback: первые 2 буквы названия
                         Text(
                             text = item.name.take(2).uppercase(),
                             color = TerminalGreen,
@@ -209,15 +217,26 @@ fun ItemWireRow(item: Item, onClick: () -> Unit) {
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.name.lowercase(),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = item.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (item.averageRating > 0) {
+                        AvgRatingChip(rating = item.averageRating)
+                    }
+                }
+
                 if (item.type.isNotBlank()) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = item.type,
+                        text = item.type.toDisplayCase(caseStyle),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
@@ -237,6 +256,7 @@ fun ItemWireRow(item: Item, onClick: () -> Unit) {
 fun FeedScreenPreview() {
     CodeboxTheme {
         FeedScreenContent(
+            caseStyle = TextCaseStyle.NORMAL,
             uiState = FeedUiState.Success(
                 listOf(
                     Item(name = "kotlin", description = "jvm language"),
@@ -245,7 +265,6 @@ fun FeedScreenPreview() {
                 )
             ),
             onItemClick = {},
-
         )
     }
 }

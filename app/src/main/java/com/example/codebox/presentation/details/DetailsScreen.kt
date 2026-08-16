@@ -7,21 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material.icons.outlined.Build
-import androidx.compose.material.icons.outlined.Cloud
-import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.Dataset
-import androidx.compose.material.icons.outlined.Palette
-import androidx.compose.material.icons.outlined.PhoneAndroid
-import androidx.compose.material.icons.outlined.Security
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.SmartToy
-import androidx.compose.material.icons.outlined.Storage
-import androidx.compose.material.icons.outlined.Terminal
-import androidx.compose.material.icons.outlined.VideogameAsset
-import androidx.compose.material.icons.outlined.Web
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -43,9 +29,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.codebox.domain.Item
 import com.example.codebox.domain.ReviewWithAuthor
+import com.example.codebox.domain.TextCaseStyle
 import com.example.codebox.domain.UserReview
-import com.example.codebox.presentation.theme.*
 import com.example.codebox.presentation.common.*
+import com.example.codebox.presentation.theme.*
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 
 private val Hairline = 2.5f
 private val Wire = 1.5f
@@ -64,6 +53,7 @@ fun DetailScreen(
     viewModel: DetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val caseStyle by viewModel.textCaseStyle.collectAsStateWithLifecycle()
 
     LaunchedEffect(itemId) {
         viewModel.load(itemId)
@@ -82,6 +72,7 @@ fun DetailScreen(
         }
         is DetailUiState.Success -> {
             DetailScreenContent(
+                caseStyle = caseStyle,
                 item = state.item,
                 reviews = state.reviews,
                 myReview = state.myReview,
@@ -96,6 +87,7 @@ fun DetailScreen(
 
 @Composable
 fun DetailScreenContent(
+    caseStyle: TextCaseStyle,
     item: Item,
     reviews: List<ReviewWithAuthor>,
     myReview: UserReview?,
@@ -104,6 +96,7 @@ fun DetailScreenContent(
     onReviewAuthorClick: (String) -> Unit,
     onReviewClick: (String, String) -> Unit
 ) {
+    val currentUserId = Firebase.auth.currentUser?.uid
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -111,8 +104,6 @@ fun DetailScreenContent(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
     ) {
-        // ── Шапка ──
-        // ── Шапка ──
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -122,7 +113,6 @@ fun DetailScreenContent(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Левый блок: назад
                 Box(
                     modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.CenterStart
@@ -134,9 +124,8 @@ fun DetailScreenContent(
                     )
                 }
 
-                // Центральный блок: заголовок
                 Text(
-                    text = "// переменная: ${item.type}",
+                    text = "// переменная: ${item.type.toDisplayCase(caseStyle)}",
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     modifier = Modifier.weight(2f),
@@ -145,7 +134,6 @@ fun DetailScreenContent(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // Правый блок: пустой (для баланса ширины)
                 Box(
                     modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.CenterEnd
@@ -155,12 +143,10 @@ fun DetailScreenContent(
             }
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalLine(strokeWidth = Hairline)
-
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ── Большой квадрат с символом/иконкой + название + описание ──
         Row(
             verticalAlignment = Alignment.Top,
             modifier = Modifier.fillMaxWidth()
@@ -229,11 +215,21 @@ fun DetailScreenContent(
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.name.lowercase(),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = TextPrimary
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = item.name,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = TextPrimary
+                    )
+                    if (item.averageRating > 0) {
+                        AvgRatingChip(rating = item.averageRating)
+                    }
+                }
+
                 if (item.description.isNotBlank()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -249,17 +245,16 @@ fun DetailScreenContent(
         HorizontalLine(strokeWidth = Hairline)
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ── Кнопка: оценить / уже оценено ──
         if (myReview != null) {
             WireButton(
-                text = "[ уже оценено ]",
+                text = "[ уже оценено ]".toDisplayCase(caseStyle),
                 onClick = onRateClick,
                 isAccent = false,
                 modifier = Modifier.fillMaxWidth()
             )
         } else {
             WireButton(
-                text = "[ оценить ]",
+                text = "[ оценить ]".toDisplayCase(caseStyle),
                 onClick = onRateClick,
                 isAccent = true,
                 modifier = Modifier.fillMaxWidth()
@@ -270,9 +265,8 @@ fun DetailScreenContent(
         HorizontalLine(strokeWidth = Hairline)
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ── Заголовок ревью ──
         Text(
-            text = "// ревью",
+            text = "// ревью".toDisplayCase(caseStyle),
             style = MaterialTheme.typography.labelSmall,
             color = TextMuted
         )
@@ -281,7 +275,7 @@ fun DetailScreenContent(
 
         if (reviews.isEmpty()) {
             Text(
-                text = "// пока нет оценок",
+                text = "// пока нет оценок".toDisplayCase(caseStyle),
                 color = TextSecondary,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(top = 16.dp)
@@ -290,6 +284,8 @@ fun DetailScreenContent(
             reviews.forEach { review ->
                 PublicReviewRow(
                     review = review,
+                    caseStyle = caseStyle,
+                    isCurrentUser = review.userId == currentUserId,
                     onAuthorClick = { onReviewAuthorClick(review.userId) },
                     onClick = { onReviewClick(review.itemId, review.userId) }
                 )
@@ -301,13 +297,16 @@ fun DetailScreenContent(
     }
 }
 
-// ── Карточка ревью ──
 @Composable
 fun PublicReviewRow(
     review: ReviewWithAuthor,
+    caseStyle: TextCaseStyle,
+    isCurrentUser: Boolean,
     onAuthorClick: () -> Unit,
     onClick: () -> Unit
 ) {
+    val borderColor = if (isCurrentUser) TerminalGreen else LineColor
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -316,10 +315,10 @@ fun PublicReviewRow(
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
             drawRect(
-                color = LineColor,
+                color = borderColor,
                 topLeft = Offset.Zero,
                 size = size,
-                style = Stroke(width = Wire)
+                style = Stroke(width = if (isCurrentUser) Accent else Wire)
             )
         }
 
@@ -334,9 +333,9 @@ fun PublicReviewRow(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = review.authorName.lowercase(),
+                    text = review.authorName,
                     style = MaterialTheme.typography.titleMedium,
-                    color = TerminalGreen,
+                    color = if (isCurrentUser) TerminalGreen else TextPrimary,
                     modifier = Modifier.clickable { onAuthorClick() }
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -379,6 +378,7 @@ fun PublicReviewRow(
 fun DetailScreenPreview() {
     CodeboxTheme {
         DetailScreenContent(
+            caseStyle = TextCaseStyle.NORMAL,
             item = Item(
                 id = "1",
                 name = "kotlin",

@@ -32,6 +32,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.codebox.domain.ReviewWithItem
+import com.example.codebox.domain.TextCaseStyle
 import com.example.codebox.domain.UserReview
 import com.example.codebox.presentation.components.AvatarImage
 import com.example.codebox.presentation.common.*
@@ -54,19 +55,20 @@ fun ProfileScreen(
     onSearchClick: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val caseStyle by viewModel.textCaseStyle.collectAsStateWithLifecycle()
     var showDeleteConfirm by remember { mutableStateOf<ReviewWithItem?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.loadProfile()
     }
     ProfileScreenContent(
+        caseStyle = caseStyle,
         uiState = uiState,
         onReviewClick = onReviewClick,
         onEditReviewClick = onEditReviewClick,
         onShowDeleteConfirm = { showDeleteConfirm = it },
         onSettingsClick = onSettingsClick,
-        onFeedClick = onFeedClick,
-        onSearchClick = onSearchClick,
+
     )
     if (showDeleteConfirm != null) {
         DeleteConfirmDialog(
@@ -75,21 +77,22 @@ fun ProfileScreen(
                 viewModel.deleteReview(showDeleteConfirm!!.review.itemId)
                 showDeleteConfirm = null
             },
-            onDismiss = { showDeleteConfirm = null }
+            onDismiss = { showDeleteConfirm = null },
+            caseStyle = caseStyle
         )
     }
 }
 
 @Composable
 fun ProfileScreenContent(
+    caseStyle: TextCaseStyle,
     uiState: ProfileUiState,
     onReviewClick: (String) -> Unit,
     onEditReviewClick: (String) -> Unit,
     onShowDeleteConfirm: (ReviewWithItem) -> Unit,
     onSettingsClick: () -> Unit,
-    onFeedClick: () -> Unit,
-    onSearchClick: () -> Unit,
-) {
+
+    ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -107,7 +110,7 @@ fun ProfileScreenContent(
             ) {
                 Box(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "// профиль",
+                        text = "// профиль".toDisplayCase(caseStyle),
                         style = MaterialTheme.typography.titleLarge,
                         color = TextPrimary,
                         modifier = Modifier.align(Alignment.Center)
@@ -142,7 +145,7 @@ fun ProfileScreenContent(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    "// error",
+                                    "// error".toDisplayCase(caseStyle),
                                     color = TextMuted,
                                     style = MaterialTheme.typography.titleMedium
                                 )
@@ -160,6 +163,7 @@ fun ProfileScreenContent(
                             onReviewClick = onReviewClick,
                             onShowDeleteConfirm = onShowDeleteConfirm,
                             onEditReviewClick = onEditReviewClick,
+                            caseStyle = caseStyle
                         )
                     }
                 }
@@ -228,7 +232,9 @@ private fun BottomNavIcon(
 fun DeleteConfirmDialog(
     review: ReviewWithItem,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    caseStyle: TextCaseStyle,
+
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -275,7 +281,7 @@ fun DeleteConfirmDialog(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "// удалить отзыв?",
+                        text = "// удалить отзыв?".toDisplayCase(caseStyle),
                         color = TextPrimary,
                         style = MaterialTheme.typography.headlineSmall
                     )
@@ -288,14 +294,14 @@ fun DeleteConfirmDialog(
                     Spacer(modifier = Modifier.height(32.dp))
 
                     WireButton(
-                        text = "[ удалить ]",
+                        text = "[ удалить ]".toDisplayCase(caseStyle),
                         onClick = onConfirm,
                         isAccent = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     WireButton(
-                        text = "[ отмена ]",
+                        text = "[ отмена ]".toDisplayCase(caseStyle),
                         onClick = onDismiss,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -311,6 +317,7 @@ private fun ProfileBody(
     onReviewClick: (String) -> Unit,
     onEditReviewClick: (String) -> Unit,
     onShowDeleteConfirm: (ReviewWithItem) -> Unit,
+    caseStyle: TextCaseStyle,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Column(
@@ -348,7 +355,7 @@ private fun ProfileBody(
             Column {
                 val countReview = state.reviews.count().toString()
                 Text(
-                    text = "Количество ревью: $countReview",
+                    text = "количество ревью:".toDisplayCase(caseStyle) + countReview,
                     style = MaterialTheme.typography.bodyLarge,
                     color = TerminalGreen
                 )
@@ -382,7 +389,7 @@ private fun ProfileBody(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "// мои ревью",
+            text = "// мои ревью".toDisplayCase(caseStyle),
             style = MaterialTheme.typography.titleMedium,
             color = TextMuted,
             modifier = Modifier.align(Alignment.Start)
@@ -392,7 +399,7 @@ private fun ProfileBody(
 
         if (state.reviews.isEmpty()) {
             Text(
-                text = "// пока нет оценок",
+                text = "// пока нет оценок".toDisplayCase(caseStyle),
                 color = TextSecondary,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(top = 32.dp)
@@ -572,9 +579,8 @@ fun ProfileScreenPreview() {
             onReviewClick = {},
             onShowDeleteConfirm = {},
             onSettingsClick = {},
-            onSearchClick = {},
-            onFeedClick = {},
-            onEditReviewClick = {}
+            onEditReviewClick = {},
+            caseStyle = TextCaseStyle.NORMAL
         )
     }
 }

@@ -27,7 +27,8 @@ class ItemRepository @Inject constructor(
                         type = doc.getString("type") ?: "",
                         description = doc.getString("description") ?: "",
                         symbol = doc.getString("symbol") ?: "",
-                        iconKey = doc.getString("iconKey") ?: ""
+                        iconKey = doc.getString("iconKey") ?: "",
+                        averageRating = doc.getDouble("averageRating") ?: 0.0
                     )
                 } ?: emptyList()
                 trySend(items)
@@ -48,7 +49,8 @@ class ItemRepository @Inject constructor(
                 type = doc.getString("type") ?: "",
                 description = doc.getString("description") ?: "",
                 symbol = doc.getString("symbol") ?: "",
-                iconKey = doc.getString("iconKey") ?: ""
+                iconKey = doc.getString("iconKey") ?: "",
+                averageRating = doc.getDouble("averageRating") ?: 0.0
             )
         } else null
     }
@@ -63,7 +65,8 @@ class ItemRepository @Inject constructor(
                 type = doc.getString("type") ?: "",
                 description = doc.getString("description") ?: "",
                 symbol = doc.getString("symbol"),
-                iconKey = doc.getString("iconKey")
+                iconKey = doc.getString("iconKey"),
+                averageRating = doc.getDouble("averageRating") ?: 0.0
             )
         }
 

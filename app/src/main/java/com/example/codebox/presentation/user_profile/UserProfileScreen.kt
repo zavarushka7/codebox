@@ -22,10 +22,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.codebox.domain.ReviewWithItem
+import com.example.codebox.domain.TextCaseStyle
 import com.example.codebox.domain.UserReview
-import com.example.codebox.presentation.common.BlinkingCursor
-import com.example.codebox.presentation.common.DottedDivider
-import com.example.codebox.presentation.common.HorizontalLine
+import com.example.codebox.presentation.common.*
 import com.example.codebox.presentation.components.AvatarImage
 import com.example.codebox.presentation.theme.*
 
@@ -43,12 +42,14 @@ fun UserProfileScreen(
     viewModel: UserProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val caseStyle by viewModel.textCaseStyle.collectAsStateWithLifecycle()
 
     LaunchedEffect(userId) {
         viewModel.load()
     }
 
     UserProfileScreenContent(
+        caseStyle = caseStyle,
         uiState = uiState,
         onBack = onBack,
         onItemClick = onItemClick
@@ -57,6 +58,7 @@ fun UserProfileScreen(
 
 @Composable
 fun UserProfileScreenContent(
+    caseStyle: TextCaseStyle,
     uiState: UserProfileUiState,
     onBack: () -> Unit,
     onItemClick: (String) -> Unit
@@ -67,7 +69,6 @@ fun UserProfileScreenContent(
             .background(PureBlack)
             .padding(horizontal = 16.dp)
     ) {
-        // ── Шапка ──
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -82,7 +83,7 @@ fun UserProfileScreenContent(
                         .clickable { onBack() }
                 )
                 Text(
-                    text = "// пользователь",
+                    text = "// пользователь".toDisplayCase(caseStyle),
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     modifier = Modifier.align(Alignment.Center)
@@ -105,7 +106,11 @@ fun UserProfileScreenContent(
                     }
                 }
                 is UserProfileUiState.Success -> {
-                    UserProfileBody(state = state, onItemClick = onItemClick)
+                    UserProfileBody(
+                        caseStyle = caseStyle,
+                        state = state,
+                        onItemClick = onItemClick
+                    )
                 }
             }
         }
@@ -114,6 +119,7 @@ fun UserProfileScreenContent(
 
 @Composable
 private fun UserProfileBody(
+    caseStyle: TextCaseStyle,
     state: UserProfileUiState.Success,
     onItemClick: (String) -> Unit
 ) {
@@ -153,7 +159,7 @@ private fun UserProfileBody(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "// ревью",
+            text = "// ревью".toDisplayCase(caseStyle),
             style = MaterialTheme.typography.titleMedium,
             color = TextMuted,
             modifier = Modifier.align(Alignment.Start)
@@ -163,7 +169,7 @@ private fun UserProfileBody(
 
         if (state.reviews.isEmpty()) {
             Text(
-                text = "// пока нет оценок",
+                text = "// пока нет оценок".toDisplayCase(caseStyle),
                 color = TextSecondary,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(top = 32.dp)
@@ -171,6 +177,7 @@ private fun UserProfileBody(
         } else {
             state.reviews.forEach { rw ->
                 UserReviewRow(
+                    caseStyle = caseStyle,
                     rw = rw,
                     onClick = { onItemClick(rw.review.itemId) }
                 )
@@ -183,7 +190,11 @@ private fun UserProfileBody(
 }
 
 @Composable
-fun UserReviewRow(rw: ReviewWithItem, onClick: () -> Unit) {
+fun UserReviewRow(
+    caseStyle: TextCaseStyle,
+    rw: ReviewWithItem,
+    onClick: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -239,7 +250,6 @@ fun UserReviewRow(rw: ReviewWithItem, onClick: () -> Unit) {
     }
 }
 
-
 @Preview(
     showBackground = true,
     showSystemUi = true,
@@ -250,6 +260,7 @@ fun UserReviewRow(rw: ReviewWithItem, onClick: () -> Unit) {
 fun UserProfileScreenPreview() {
     CodeboxTheme {
         UserProfileScreenContent(
+            caseStyle = TextCaseStyle.NORMAL,
             uiState = UserProfileUiState.Success(
                 nickname = "codeNinja",
                 avatarUrl = "",

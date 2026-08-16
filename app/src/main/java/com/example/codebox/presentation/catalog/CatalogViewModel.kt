@@ -4,20 +4,34 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.codebox.data.repository.ItemRepository
-import com.example.codebox.domain.Item
+import com.example.codebox.data.repository.SettingsRepository
+import com.example.codebox.domain.TextCaseStyle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
 
 @OptIn(FlowPreview::class)
 @HiltViewModel
 class CatalogViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val itemRepository: ItemRepository
+    private val itemRepository: ItemRepository,
+    settingsRepository: SettingsRepository
 ) : ViewModel() {
+
+    val textCaseStyle: StateFlow<TextCaseStyle> = settingsRepository.textCaseStyle
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TextCaseStyle.NORMAL)
 
     val mode: CatalogMode
     val typeFilter: String

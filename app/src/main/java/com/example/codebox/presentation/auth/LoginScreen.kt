@@ -1,6 +1,5 @@
 package com.example.codebox.presentation.auth
 
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,20 +8,22 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.codebox.presentation.theme.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.codebox.R
+import com.example.codebox.domain.TextCaseStyle
 import com.example.codebox.presentation.common.*
-
+import com.example.codebox.presentation.theme.*
 
 private val Hairline = 2.5f
-private val Wire = 1.5f
-private val Accent = 2f
 private val LineColor = Color(0xFF777777)
 
 @Composable
@@ -30,7 +31,10 @@ fun LoginScreen(
     onAuthSuccess: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
+    val caseStyle by viewModel.textCaseStyle.collectAsStateWithLifecycle()
+
     LoginScreenContent(
+        caseStyle = caseStyle,
         email = viewModel.email.value,
         password = viewModel.password.value,
         error = viewModel.error.value,
@@ -44,6 +48,7 @@ fun LoginScreen(
 
 @Composable
 fun LoginScreenContent(
+    caseStyle: TextCaseStyle,
     email: String,
     password: String,
     error: String?,
@@ -59,7 +64,6 @@ fun LoginScreenContent(
             .background(PureBlack)
             .padding(horizontal = 16.dp)
     ) {
-        // ── Шапка ──
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -67,7 +71,7 @@ fun LoginScreenContent(
         ) {
             Box(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "// codebox auth",
+                    text = stringResource(R.string.codebox_auth).toDisplayCase(caseStyle),
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     modifier = Modifier.align(Alignment.CenterStart)
@@ -130,7 +134,7 @@ fun LoginScreenContent(
         if (error != null) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = error,
+                text = error.toDisplayCase(caseStyle),
                 color = TerminalGreen,
                 style = MaterialTheme.typography.labelSmall
             )
@@ -147,7 +151,7 @@ fun LoginScreenContent(
             }
         } else {
             WireButton(
-                text = "signIn()",
+                text = "signIn()".toDisplayCase(caseStyle),
                 onClick = onSignIn,
                 isAccent = true,
                 modifier = Modifier.fillMaxWidth()
@@ -156,7 +160,7 @@ fun LoginScreenContent(
             Spacer(modifier = Modifier.height(8.dp))
 
             WireButton(
-                text = "signUp()",
+                text = "signUp()".toDisplayCase(caseStyle),
                 onClick = onSignUp,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -164,42 +168,15 @@ fun LoginScreenContent(
     }
 }
 
-@Preview(
-    showBackground = true,
-    showSystemUi = true,
-    device = "id:pixel_5",
-    backgroundColor = 0xFF000000
-)
+@Preview(showBackground = true, showSystemUi = true, device = "id:pixel_5", backgroundColor = 0xFF000000)
 @Composable
 fun LoginScreenPreview() {
     CodeboxTheme {
         LoginScreenContent(
+            caseStyle = TextCaseStyle.NORMAL,
             email = "dev@codebox.app",
             password = "password123",
             error = null,
-            isLoading = false,
-            onEmailChange = {},
-            onPasswordChange = {},
-            onSignIn = {},
-            onSignUp = {}
-        )
-    }
-}
-
-@Preview(
-    showBackground = true,
-    showSystemUi = true,
-    device = "id:pixel_5",
-    name = "Login Error",
-    backgroundColor = 0xFF000000
-)
-@Composable
-fun LoginScreenErrorPreview() {
-    CodeboxTheme {
-        LoginScreenContent(
-            email = "",
-            password = "",
-            error = "Неверный email или пароль",
             isLoading = false,
             onEmailChange = {},
             onPasswordChange = {},

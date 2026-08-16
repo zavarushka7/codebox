@@ -25,9 +25,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.codebox.domain.Item
+import com.example.codebox.domain.TextCaseStyle
 import com.example.codebox.domain.UserReview
-import com.example.codebox.presentation.theme.*
 import com.example.codebox.presentation.common.*
+import com.example.codebox.presentation.theme.*
 
 private val Hairline = 2.5f
 private val LineColor = Color(0xFF777777)
@@ -40,6 +41,7 @@ fun ReviewFormScreen(
     val item by viewModel.item.collectAsStateWithLifecycle()
     val review by viewModel.review.collectAsStateWithLifecycle()
     val authorName by viewModel.authorName.collectAsStateWithLifecycle()
+    val caseStyle by viewModel.textCaseStyle.collectAsStateWithLifecycle()
     val isReadOnly = viewModel.isReadOnly
 
     if (item == null) {
@@ -50,6 +52,7 @@ fun ReviewFormScreen(
     }
 
     ReviewFormContent(
+        caseStyle = caseStyle,
         item = item!!,
         review = review,
         authorName = authorName,
@@ -66,6 +69,7 @@ fun ReviewFormScreen(
 
 @Composable
 fun ReviewFormContent(
+    caseStyle: TextCaseStyle,
     item: Item,
     review: UserReview,
     authorName: String,
@@ -96,7 +100,7 @@ fun ReviewFormContent(
                         .clickable { onBack() }
                 )
                 Text(
-                    text = if (isReadOnly) "// ревью" else "// оценить",
+                    text = if (isReadOnly) "// ревью".toDisplayCase(caseStyle) else "// оценить".toDisplayCase(caseStyle),
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     modifier = Modifier.align(Alignment.Center)
@@ -121,7 +125,7 @@ fun ReviewFormContent(
 
         if (isReadOnly) {
             Text(
-                text = "// автор: ${authorName.lowercase()}",
+                text = "// автор: ${authorName}",
                 style = MaterialTheme.typography.labelSmall,
                 color = TextMuted
             )
@@ -129,7 +133,7 @@ fun ReviewFormContent(
         }
 
         Text(
-            text = item.name.lowercase(),
+            text = item.name,
             style = MaterialTheme.typography.titleLarge,
             color = TextPrimary
         )
@@ -210,15 +214,7 @@ fun ReviewFormContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
 
-        WireButton(
-            text = "navigateBack()",
-            onClick = onBack,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -232,6 +228,7 @@ fun ReviewFormContent(
 fun ReviewFormPreview() {
     CodeboxTheme {
         ReviewFormContent(
+            caseStyle = TextCaseStyle.NORMAL,
             item = Item(
                 id = "1",
                 name = "kotlin",

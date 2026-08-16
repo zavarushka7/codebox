@@ -141,7 +141,9 @@ class MainActivity : ComponentActivity() {
                                     onBack = { navController.popBackStack() },
                                     onItemClick = { itemId -> navController.navigate("detail/$itemId") },
                                     onSearchByTypeClick = {},
-                                    onTypeClick = {}
+                                    onTypeClick = {},
+                                    onLowestTopClick = {},
+                                    onHighestTopClick = {}
                                 )
                             }
 
@@ -158,7 +160,14 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onTypeClick = { type ->
                                         navController.navigate("catalog/type/${Uri.encode(type)}")
+                                    },
+                                    onHighestTopClick = {
+                                        navController.navigate("catalog/${CatalogMode.TOP_RATED.name}")
+                                    },
+                                    onLowestTopClick = {
+                                        navController.navigate("catalog/${CatalogMode.LOWEST_RATED.name}")
                                     }
+
                                 )
                             }
 

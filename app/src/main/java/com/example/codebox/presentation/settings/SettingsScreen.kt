@@ -10,8 +10,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,6 +24,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.codebox.domain.TextCaseStyle
 import com.example.codebox.presentation.common.*
 import com.example.codebox.presentation.components.AvatarImage
 import com.example.codebox.presentation.theme.*
@@ -33,6 +40,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
+    val caseStyle by viewModel.textCaseStyle.collectAsStateWithLifecycle()
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
@@ -40,6 +48,7 @@ fun SettingsScreen(
     }
 
     SettingsScreenContent(
+        caseStyle = caseStyle,
         nickname = viewModel.nickname.value,
         description = viewModel.description.value,
         avatarUrl = viewModel.avatarUrl.value,
@@ -54,12 +63,16 @@ fun SettingsScreen(
         onSignOut = {
             viewModel.signOut()
             onSignedOut()
-        }
+        },
+        onCamelCaseClick = { viewModel.setTextCaseStyle(TextCaseStyle.CAMEL_CASE) },
+        onSnakeCaseClick = { viewModel.setTextCaseStyle(TextCaseStyle.SNAKE_CASE) },
+        onNormalClick = { viewModel.setTextCaseStyle(TextCaseStyle.NORMAL) }
     )
 }
 
 @Composable
 fun SettingsScreenContent(
+    caseStyle: TextCaseStyle,
     nickname: String,
     description: String,
     avatarUrl: String,
@@ -69,6 +82,9 @@ fun SettingsScreenContent(
     onSave: () -> Unit,
     onBack: () -> Unit,
     onSignOut: () -> Unit,
+    onCamelCaseClick: () -> Unit,
+    onSnakeCaseClick: () -> Unit,
+    onNormalClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -92,7 +108,7 @@ fun SettingsScreenContent(
                         .clickable { onBack() }
                 )
                 Text(
-                    text = "// настройки",
+                    text = "// настройки".toDisplayCase(caseStyle),
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     modifier = Modifier.align(Alignment.Center)
@@ -126,7 +142,7 @@ fun SettingsScreenContent(
 
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "[ сменить аватар ]",
+            text = "[ сменить аватар ]".toDisplayCase(caseStyle),
             color = TerminalGreen,
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier
@@ -184,9 +200,47 @@ fun SettingsScreenContent(
         )
 
         Spacer(modifier = Modifier.height(24.dp))
+        HorizontalLine(strokeWidth = Hairline)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // ── Стиль текста ──
+        Text(
+            text = "// стиль текста".toDisplayCase(caseStyle),
+            style = MaterialTheme.typography.labelSmall,
+            color = TextMuted
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         WireButton(
-            text = "[ выйти из аккаунта ]",
+            text = "camelCase",
+            onClick = onCamelCaseClick,
+            isAccent = caseStyle == TextCaseStyle.CAMEL_CASE,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        WireButton(
+            text = "snake_case",
+            onClick = onSnakeCaseClick,
+            isAccent = caseStyle == TextCaseStyle.SNAKE_CASE,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        WireButton(
+            text = "обычный",
+            onClick = onNormalClick,
+            isAccent = caseStyle == TextCaseStyle.NORMAL,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        WireButton(
+            text = "[ выйти из аккаунта ]".toDisplayCase(caseStyle),
             onClick = onSignOut,
             modifier = Modifier.padding(bottom = 20.dp)
         )
@@ -203,6 +257,7 @@ fun SettingsScreenContent(
 fun SettingsScreenPreview() {
     CodeboxTheme {
         SettingsScreenContent(
+            caseStyle = TextCaseStyle.NORMAL,
             nickname = "codeNinja",
             avatarUrl = "",
             onNicknameChange = {},
@@ -211,7 +266,10 @@ fun SettingsScreenPreview() {
             onBack = {},
             onSignOut = {},
             onDescriptionChange = {},
-            description = "описание"
+            description = "описание",
+            onCamelCaseClick = {},
+            onSnakeCaseClick = {},
+            onNormalClick = {}
         )
     }
 }

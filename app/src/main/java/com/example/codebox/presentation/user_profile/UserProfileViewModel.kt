@@ -4,13 +4,17 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.codebox.data.repository.ItemRepository
+import com.example.codebox.data.repository.SettingsRepository
 import com.example.codebox.data.repository.UserReviewRepository
 import com.example.codebox.domain.ReviewWithItem
+import com.example.codebox.domain.TextCaseStyle
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -31,8 +35,12 @@ class UserProfileViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val userReviewRepository: UserReviewRepository,
     private val itemRepository: ItemRepository,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    settingsRepository: SettingsRepository
 ) : ViewModel() {
+
+    val textCaseStyle: StateFlow<TextCaseStyle> = settingsRepository.textCaseStyle
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TextCaseStyle.NORMAL)
 
     private val userId: String = checkNotNull(savedStateHandle["userId"])
 

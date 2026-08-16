@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.codebox.domain.Item
+import com.example.codebox.domain.TextCaseStyle
 import com.example.codebox.presentation.common.*
 import com.example.codebox.presentation.theme.*
 
@@ -42,15 +43,19 @@ fun CatalogScreen(
     onBack: () -> Unit,
     onItemClick: (String) -> Unit,
     onSearchByTypeClick: () -> Unit,
+    onHighestTopClick: () -> Unit,
+    onLowestTopClick: () -> Unit,
     onTypeClick: (String) -> Unit,
     viewModel: CatalogViewModel = hiltViewModel()
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val caseStyle by viewModel.textCaseStyle.collectAsStateWithLifecycle()
     val mode = viewModel.mode
     val typeFilter = viewModel.typeFilter
 
     CatalogScreenContent(
+        caseStyle = caseStyle,
         mode = mode,
         query = query,
         typeFilter = typeFilter,
@@ -59,12 +64,15 @@ fun CatalogScreen(
         onBack = onBack,
         onItemClick = onItemClick,
         onSearchByTypeClick = onSearchByTypeClick,
+        onHighestTopClick = onHighestTopClick,
+        onLowestTopClick = onLowestTopClick,
         onTypeClick = onTypeClick
     )
 }
 
 @Composable
 fun CatalogScreenContent(
+    caseStyle: TextCaseStyle,
     mode: CatalogMode,
     query: String,
     typeFilter: String,
@@ -73,14 +81,16 @@ fun CatalogScreenContent(
     onBack: () -> Unit,
     onItemClick: (String) -> Unit,
     onSearchByTypeClick: () -> Unit,
+    onHighestTopClick: () -> Unit,
+    onLowestTopClick: () -> Unit,
     onTypeClick: (String) -> Unit
 ) {
     val title = when (mode) {
-        CatalogMode.SEARCH -> "// поиск"
-        CatalogMode.TYPES_LIST -> "// типы данных"
-        CatalogMode.BY_TYPE -> "// тип: ${typeFilter.ifBlank { "все" }}"
-        CatalogMode.TOP_RATED -> "// топ рейтинг"
-        CatalogMode.LOWEST_RATED -> "// низкий рейтинг"
+        CatalogMode.SEARCH -> "// поиск".toDisplayCase(caseStyle)
+        CatalogMode.TYPES_LIST -> "// типы данных".toDisplayCase(caseStyle)
+        CatalogMode.BY_TYPE -> "// тип: ${typeFilter.ifBlank { "все".toDisplayCase(caseStyle) }}"
+        CatalogMode.TOP_RATED -> "// топ рейтинг".toDisplayCase(caseStyle)
+        CatalogMode.LOWEST_RATED -> "// низкий рейтинг".toDisplayCase(caseStyle)
     }
 
     Box(
@@ -93,28 +103,39 @@ fun CatalogScreenContent(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            // ── Шапка ──
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 32.dp, bottom = 12.dp)
             ) {
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = "< назад",
-                        color = TerminalGreen,
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .clickable { onBack() }
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Text(
+                            text = "< назад",
+                            color = TerminalGreen,
+                            modifier = Modifier.clickable { onBack() }
+                        )
+                    }
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleLarge,
                         color = TextPrimary,
-                        modifier = Modifier.align(Alignment.Center),
-                        maxLines = 1,
+                        modifier = Modifier.weight(2f),
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
+                        Spacer(modifier = Modifier.width(1.dp))
+                    }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalLine(strokeWidth = Hairline)
@@ -122,12 +143,11 @@ fun CatalogScreenContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Поле поиска (только для SEARCH) ──
             if (mode == CatalogMode.SEARCH) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = onQueryChange,
-                    placeholder = { Text("// введите запрос", color = TextMuted) },
+                    placeholder = { Text("// введите запрос".toDisplayCase(caseStyle), color = TextMuted) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Outlined.Search,
@@ -151,29 +171,27 @@ fun CatalogScreenContent(
                 Spacer(modifier = Modifier.height(26.dp))
             }
 
-            // ── Контент ──
             Box(modifier = Modifier.weight(1f)) {
                 when (val state = uiState) {
                     is CatalogUiState.Idle -> {
                         if (mode == CatalogMode.SEARCH) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onSearchByTypeClick() }
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.Top
                             ) {
-                                Text(
-                                    text = "тип данных",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = TextPrimary,
-                                    modifier = Modifier.align(Alignment.CenterStart)
+                                FilterOptionRow(
+                                    label = "тип данных".toDisplayCase(caseStyle),
+                                    onClick = onSearchByTypeClick
                                 )
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                                    contentDescription = null,
-                                    tint = TextPrimary,
-                                    modifier = Modifier
-                                        .align(Alignment.CenterEnd)
-                                        .size(20.dp)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                FilterOptionRow(
+                                    label = "с наибольшим рейтингом".toDisplayCase(caseStyle),
+                                    onClick = onHighestTopClick
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                FilterOptionRow(
+                                    label = "с наименьшим рейтингом".toDisplayCase(caseStyle),
+                                    onClick = onLowestTopClick
                                 )
                             }
                         }
@@ -193,7 +211,7 @@ fun CatalogScreenContent(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = "// error",
+                                    text = "// error".toDisplayCase(caseStyle),
                                     color = TextMuted,
                                     style = MaterialTheme.typography.titleMedium
                                 )
@@ -213,6 +231,7 @@ fun CatalogScreenContent(
                             items(state.types, key = { it }) { type ->
                                 TypeRow(
                                     type = type,
+                                    caseStyle = caseStyle,
                                     onClick = { onTypeClick(type) }
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -226,7 +245,7 @@ fun CatalogScreenContent(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "// ничего не найдено",
+                                    text = "// ничего не найдено".toDisplayCase(caseStyle),
                                     color = TextSecondary,
                                     style = MaterialTheme.typography.bodyLarge
                                 )
@@ -239,6 +258,7 @@ fun CatalogScreenContent(
                                 items(state.items, key = { it.id }) { item ->
                                     CatalogItemRow(
                                         item = item,
+                                        caseStyle = caseStyle,
                                         onClick = { onItemClick(item.id) }
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -253,8 +273,8 @@ fun CatalogScreenContent(
 }
 
 @Composable
-private fun TypeRow(
-    type: String,
+private fun FilterOptionRow(
+    label: String,
     onClick: () -> Unit
 ) {
     Box(
@@ -264,7 +284,6 @@ private fun TypeRow(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.CenterStart
     ) {
-        // Рамка
         Canvas(modifier = Modifier.matchParentSize()) {
             drawRect(
                 color = LineColor,
@@ -282,7 +301,51 @@ private fun TypeRow(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = type.lowercase(),
+                text = label,
+                style = MaterialTheme.typography.titleMedium,
+                color = TextPrimary
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                contentDescription = null,
+                tint = TextSecondary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun TypeRow(
+    type: String,
+    caseStyle: TextCaseStyle,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawRect(
+                color = LineColor,
+                topLeft = Offset.Zero,
+                size = size,
+                style = Stroke(width = Wire)
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = type.toDisplayCase(caseStyle),
                 style = MaterialTheme.typography.titleMedium,
                 color = TextPrimary
             )
@@ -299,6 +362,7 @@ private fun TypeRow(
 @Composable
 private fun CatalogItemRow(
     item: Item,
+    caseStyle: TextCaseStyle,
     onClick: () -> Unit
 ) {
     Box(
@@ -322,7 +386,6 @@ private fun CatalogItemRow(
                 .padding(start = 12.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // ── Квадрат с символом/иконкой ──
             Box(
                 modifier = Modifier.size(40.dp),
                 contentAlignment = Alignment.Center
@@ -384,24 +447,22 @@ private fun CatalogItemRow(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // ── Название + тип ──
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = item.name.lowercase(),
+                    text = item.name,
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary
                 )
                 if (item.type.isNotBlank()) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = item.type,
+                        text = item.type.toDisplayCase(caseStyle),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
                 }
             }
 
-            // ── Рейтинг (для топ/низ) ──
             if (item.averageRating > 0) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -431,22 +492,18 @@ private fun CatalogItemRow(
 fun CatalogScreenPreview() {
     CodeboxTheme {
         CatalogScreenContent(
-            mode = CatalogMode.TYPES_LIST,
+            caseStyle = TextCaseStyle.NORMAL,
+            mode = CatalogMode.SEARCH,
             query = "",
             typeFilter = "",
             onQueryChange = {},
-            uiState = CatalogUiState.TypesSuccess(
-                listOf(
-                    "язык программирования",
-                    "профессия",
-                    "синтаксическая конструкция",
-                    "инструмент"
-                )
-            ),
+            uiState = CatalogUiState.Idle,
             onBack = {},
             onSearchByTypeClick = {},
             onItemClick = {},
-            onTypeClick = {}
+            onTypeClick = {},
+            onLowestTopClick = {},
+            onHighestTopClick = {}
         )
     }
 }

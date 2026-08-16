@@ -24,9 +24,7 @@ class UserReviewRepository @Inject constructor(
         } else null
     }
 
-    suspend fun saveReview(review: UserReview) {
-        doc(review.userId, review.itemId).set(review).await()
-    }
+
 
     suspend fun getAllReviewsForUser(userId: String): List<UserReview>{
         return firestore.collection("user_reviews")
@@ -44,9 +42,6 @@ class UserReviewRepository @Inject constructor(
             }
     }
 
-    suspend fun deleteReview(userId: String, itemId: String){
-        doc(userId, itemId).delete().await()
-    }
 
     suspend fun getReviewsForItem(itemId: String): List<ReviewWithAuthor>{
         val snapshot = firestore.collection("user_reviews")
@@ -75,5 +70,36 @@ class UserReviewRepository @Inject constructor(
                 authorName = nickname
             )
         }
+    }
+    suspend fun getAverageRating(itemId: String): Double {
+        val snapshot = firestore.collection("user_reviews")
+            .whereEqualTo("itemId", itemId)
+            .get()
+            .await()
+
+        if (snapshot.isEmpty) return 0.0
+
+        val ratings = snapshot.documents.mapNotNull { it.getLong("rating")?.toInt() }
+        return if (ratings.isNotEmpty()) ratings.average() else 0.0
+    }
+
+    suspend fun saveReview(review: UserReview) {
+        doc(review.userId, review.itemId).set(review).await()
+
+        // Пересчитываем и пишем в документ item
+        val newAvg = getAverageRating(review.itemId)
+        firestore.collection("items").document(review.itemId)
+            .update("averageRating", newAvg)
+            .await()
+    }
+
+    suspend fun deleteReview(userId: String, itemId: String) {
+        doc(userId, itemId).delete().await()
+
+        // Пересчитываем после удаления
+        val newAvg = getAverageRating(itemId)
+        firestore.collection("items").document(itemId)
+            .update("averageRating", newAvg)
+            .await()
     }
 }
