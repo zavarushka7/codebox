@@ -4,6 +4,11 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.codebox.data.repository.AwardRepository
+import com.example.codebox.data.repository.ItemRepository
+import com.example.codebox.data.repository.LikeRepository
+import com.example.codebox.data.repository.UserReviewRepository
+import com.example.codebox.domain.service.AwardService
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -28,4 +33,19 @@ object AppModule {
     @Singleton
     fun provideDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
         context.dataStore
+
+
+    @Provides
+    @Singleton
+    fun provideAwardService(
+        awardRepository: AwardRepository,
+        userReviewRepository: UserReviewRepository,
+        itemRepository: ItemRepository,
+        likeRepository: LikeRepository
+    ): AwardService {
+        return AwardService(
+            awardRepository, userReviewRepository,
+            itemRepository, likeRepository
+        )
+    }
 }

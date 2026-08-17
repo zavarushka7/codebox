@@ -261,7 +261,8 @@ fun ReviewFormContent(
             isLiked = isLiked,
             count = likeCount,
             onToggle = onLikeClick,   // ← сердечко тогглит
-            onCountClick = onShowLikes // ← счётчик ведёт на экран лайков
+            onCountClick = onShowLikes,
+            isReadOnly = isReadOnly
         )
     }
 }
@@ -272,6 +273,7 @@ fun LikeButton(
     count: Int,
     onToggle: () -> Unit,
     onCountClick: () -> Unit,
+    isReadOnly: Boolean,
     modifier: Modifier = Modifier
 ) {
     var targetScale by remember { mutableFloatStateOf(1f) }
@@ -292,14 +294,20 @@ fun LikeButton(
         Box(
             modifier = Modifier
                 .size(36.dp)
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onTap = {
-                            targetScale = 0.75f
-                            onToggle()
+                .then(
+                    if (isReadOnly) {
+                        Modifier.pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = {
+                                    targetScale = 0.75f
+                                    onToggle()
+                                }
+                            )
                         }
-                    )
-                },
+                    } else {
+                        Modifier  // ← Если readOnly - без pointerInput
+                    }
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -324,9 +332,16 @@ fun LikeButton(
 
         Box(
             modifier = Modifier
-                .pointerInput(Unit) {
-                    detectTapGestures(onTap = { onCountClick() })
+                .then(
+                if (isReadOnly) {
+                    Modifier
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = { onCountClick() })
+                    }
+                } else {
+                    Modifier
                 }
+        )
                 .padding(horizontal = 4.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center
         ) {

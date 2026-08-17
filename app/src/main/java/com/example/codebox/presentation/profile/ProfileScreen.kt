@@ -1,25 +1,56 @@
 package com.example.codebox.presentation.profile
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.with
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -28,13 +59,15 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.codebox.domain.AwardDisplay
 import com.example.codebox.domain.ReviewWithItem
 import com.example.codebox.domain.TextCaseStyle
+import com.example.codebox.domain.UserAward
 import com.example.codebox.domain.UserReview
 import com.example.codebox.presentation.components.AvatarImage
 import com.example.codebox.presentation.common.*
 import com.example.codebox.presentation.theme.*
-import com.google.firestore.v1.TransactionOptions
+import kotlinx.coroutines.launch
 
 private val Hairline = 2.5f
 private val Wire = 1.5f
@@ -51,7 +84,6 @@ fun ProfileScreen(
     onSettingsClick: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel(),
     onBack: () -> Unit
-
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val caseStyle by viewModel.textCaseStyle.collectAsStateWithLifecycle()
@@ -70,7 +102,6 @@ fun ProfileScreen(
         onSettingsClick = onSettingsClick,
         isReadOnly = isReadOnly,
         onBack = onBack
-
     )
     if (showDeleteConfirm != null) {
         DeleteConfirmDialog(
@@ -95,8 +126,7 @@ fun ProfileScreenContent(
     onSettingsClick: () -> Unit,
     isReadOnly: Boolean,
     onBack: () -> Unit
-
-    ) {
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -107,13 +137,14 @@ fun ProfileScreenContent(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
+            // ─── Шапка ───
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 32.dp, bottom = 12.dp)
             ) {
                 Box(modifier = Modifier.fillMaxWidth()) {
-                    if (isReadOnly){
+                    if (isReadOnly) {
                         Text(
                             text = "< назад",
                             color = TerminalGreen,
@@ -123,12 +154,12 @@ fun ProfileScreenContent(
                         )
                     }
                     Text(
-                        text = "// профиль".toDisplayCase(caseStyle),
+                        text = "// профиль ${(uiState as? ProfileUiState.Success)?.nickname.orEmpty()}".toDisplayCase(caseStyle),
                         style = MaterialTheme.typography.titleLarge,
                         color = TextPrimary,
                         modifier = Modifier.align(Alignment.Center)
                     )
-                    if (!isReadOnly){
+                    if (!isReadOnly) {
                         Icon(
                             imageVector = Icons.Outlined.Settings,
                             contentDescription = "настройки",
@@ -139,11 +170,12 @@ fun ProfileScreenContent(
                                 .clickable { onSettingsClick() }
                         )
                     }
-
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalLine(strokeWidth = Hairline)
             }
+
+            // ─── Контент ───
             Box(modifier = Modifier.weight(1f)) {
                 when (val state = uiState) {
                     is ProfileUiState.Loading -> {
@@ -189,16 +221,12 @@ fun ProfileScreenContent(
     }
 }
 
-
-
-
 @Composable
 fun DeleteConfirmDialog(
     review: ReviewWithItem,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     caseStyle: TextCaseStyle,
-
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -284,93 +312,183 @@ private fun ProfileBody(
     caseStyle: TextCaseStyle,
     isReadOnly: Boolean
 ) {
+    val pagerState = rememberPagerState(pageCount = { 2 })
+    val scope = rememberCoroutineScope()
+
+    val tabs = listOf(
+        "ревью".toDisplayCase(caseStyle),
+        "награды".toDisplayCase(caseStyle)
+    )
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // ─── Табы сразу под шапкой ───
+        TabRow(
+            selectedTabIndex = pagerState.currentPage,
+            containerColor = Color.Transparent,
+            contentColor = TerminalGreen,
+            divider = {},
+            indicator = { tabPositions ->
+                TabRowDefaults.SecondaryIndicator(
+                    modifier = Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
+                    color = TerminalGreen,
+                    height = 2.dp
+                )
+            }
+        ) {
+            tabs.forEachIndexed { index, title ->
+                Tab(
+                    selected = pagerState.currentPage == index,
+                    onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                    text = {
+                        Text(
+                            text = title,
+                            color = if (pagerState.currentPage == index) TerminalGreen else TextMuted,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // ─── Пейджер со свайпом ───
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) { page ->
+            when (page) {
+                0 -> ProfileReviewsPage(
+                    state = state,
+                    caseStyle = caseStyle,
+                    isReadOnly = isReadOnly,
+                    onReviewClick = onReviewClick,
+                    onEditReviewClick = onEditReviewClick,
+                    onShowDeleteConfirm = onShowDeleteConfirm
+                )
+                1 -> AwardsPage(
+                    awards = state.awards,
+                    caseStyle = caseStyle)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileReviewsPage(
+    state: ProfileUiState.Success,
+    caseStyle: TextCaseStyle,
+    isReadOnly: Boolean,
+    onReviewClick: (String) -> Unit,
+    onEditReviewClick: (String) -> Unit,
+    onShowDeleteConfirm: (ReviewWithItem) -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(32.dp))
+        // ─── Аватар, ник, email, описание ───
+        item {
+            Spacer(modifier = Modifier.height(32.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Start
-        ) {
-            Column {
-                AvatarImage(
-                    avatarData = state.avatarUrl,
-                    nickname = state.nickname,
-                    modifier = Modifier.size(100.dp)
-                )
-                Spacer(modifier = Modifier.height(20.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                Column {
+                    AvatarImage(
+                        avatarData = state.avatarUrl,
+                        nickname = state.nickname,
+                        modifier = Modifier.size(100.dp)
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text(
+                        text = state.nickname,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    state.email?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = TextSecondary
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(18.dp))
+                Column {
+                    val countReview = state.reviews.count().toString()
+                    Text(
+                        text = "количество ревью:".toDisplayCase(caseStyle) + countReview,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = TerminalGreen
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(25.dp))
+
+            Box(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = state.nickname,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = TextPrimary
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = state.email,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = TextSecondary
+                    text = state.description,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = if (expanded) Int.MAX_VALUE else 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = TextPrimary,
+                    modifier = Modifier.align(Alignment.CenterStart)
                 )
             }
-            Spacer(modifier = Modifier.width(18.dp))
-            Column {
-                val countReview = state.reviews.count().toString()
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
                 Text(
-                    text = "количество ревью:".toDisplayCase(caseStyle) + countReview,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = TerminalGreen
+                    text = "...",
+                    color = TerminalGreen,
+                    fontSize = 22.sp,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.clickable { expanded = !expanded }
                 )
             }
-        }
-        Spacer(modifier = Modifier.width(25.dp))
-        Text(
-            text = state.description,
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = if (expanded) Int.MAX_VALUE else 2,
-            color = TextPrimary,
-            modifier = Modifier.align(Alignment.Start)
-        )
 
-        Spacer(modifier = Modifier.height(4.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
+            Spacer(modifier = Modifier.height(4.dp))
+            DottedDivider()
+            Spacer(modifier = Modifier.height(24.dp))
+
             Text(
-                text = if (expanded) "..." else "...",
-                color = TerminalGreen,
-                fontSize = 22.sp,
+                text = if (!isReadOnly) "// мои ревью".toDisplayCase(caseStyle) else "// ревью".toDisplayCase(caseStyle),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.clickable { expanded = !expanded }
+                color = TextMuted,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Start
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
-        DottedDivider()
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = if (!isReadOnly) "// мои ревью".toDisplayCase(caseStyle) else "// ревью".toDisplayCase(caseStyle),
-            style = MaterialTheme.typography.titleMedium,
-            color = TextMuted,
-            modifier = Modifier.align(Alignment.Start)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
+        // ─── Список ревью ───
         if (state.reviews.isEmpty()) {
-            Text(
-                text = "// пока нет оценок".toDisplayCase(caseStyle),
-                color = TextSecondary,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(top = 32.dp)
-            )
+            item {
+                Box(
+                    modifier = Modifier.fillParentMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "// пока нет оценок".toDisplayCase(caseStyle),
+                        color = TextSecondary,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
         } else {
-            state.reviews.forEach { rw ->
+            items(state.reviews, key = { it.review.itemId }) { rw ->
                 ReviewWireRow(
                     rw = rw,
                     onCardClick = { onReviewClick(rw.review.itemId) },
@@ -384,6 +502,286 @@ private fun ProfileBody(
     }
 }
 
+@Composable
+private fun AwardsPage(
+    awards: List<AwardDisplay>,
+    caseStyle: TextCaseStyle
+) {
+
+        if (awards.isEmpty()) {
+
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "// пока нет наград".toDisplayCase(caseStyle),
+                        color = TextSecondary,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+                contentPadding = PaddingValues(vertical = 16.dp, horizontal = 8.dp)
+            ) {
+                items(awards, key = { it.award.key }) { display ->
+                    AwardItem(
+                        display = display,
+                        caseStyle = caseStyle,
+                        modifier = Modifier.padding(horizontal = 2.dp)
+                    )
+                }
+            }
+        }
+
+
+
+}
+
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+fun AwardItem(
+    display: AwardDisplay,
+    caseStyle: TextCaseStyle,
+    modifier: Modifier = Modifier
+) {
+    var isFlipped by remember { mutableStateOf(false) }
+    val rotation by animateFloatAsState(
+        targetValue = if (isFlipped) 180f else 0f,
+        animationSpec = tween(
+            durationMillis = 400,
+            easing = FastOutSlowInEasing
+        ),
+        label = "flip_animation"
+    )
+
+    val isUnlocked = display.isUnlocked
+
+    val infiniteTransition = rememberInfiniteTransition()
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .size(110.dp)
+                .then(
+                    if (isUnlocked) {
+                        Modifier
+
+                    } else {
+                        Modifier
+                            .blur(12.dp)
+                            .alpha(0.4f)
+
+                    }
+                )
+                .graphicsLayer {
+                    rotationY = rotation
+                    cameraDistance = 8f * size.height
+                }
+                .clickable(enabled = isUnlocked) {
+                    if (isUnlocked) isFlipped = !isFlipped
+                }
+        ) {
+            WireframeBox(
+                isAccent = isUnlocked,
+                isPulsing = isUnlocked,
+                pulse = pulse
+            )
+            AnimatedContent(
+                targetState = isFlipped,
+                transitionSpec = {
+                    fadeIn() with fadeOut()
+                }
+            ) { flipped ->
+                if (flipped && isUnlocked) {
+                    // Оборотная сторона - отзеркаливаем текст обратно
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                // Компенсируем отражение родительского контейнера
+                                scaleX = -1f
+                            }
+                    ) {
+                        AwardBackSide(
+                            display = display,
+                            caseStyle = caseStyle
+                        )
+                    }
+                } else {
+                    AwardFrontSide(
+                        display = display,
+                        caseStyle = caseStyle,
+                        isUnlocked = isUnlocked
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+       if (isUnlocked){
+           Text(
+               text = display.award.name.toDisplayCase(caseStyle),
+               color = if (isUnlocked) TerminalGreen else TextMuted,
+               style = MaterialTheme.typography.titleSmall,
+               textAlign = TextAlign.Center,
+               maxLines = 2,
+               fontSize = 14.sp,
+               modifier = if (!isUnlocked){
+                   Modifier
+                       .blur(4.dp)
+                       .alpha(0.6f)
+               } else {
+                   Modifier
+               }
+           )
+           Spacer(modifier = Modifier.width(2.dp))
+           Text(
+               text = "${display.currentRank}/${display.award.maxRank}",
+               color = if (isUnlocked) TerminalGreen else TextMuted,
+               style = MaterialTheme.typography.titleSmall,
+               textAlign = TextAlign.Center,
+               fontSize = 10.sp,
+           )
+       } else {
+
+            Icon(
+                imageVector = Icons.Outlined.Lock,
+                contentDescription = "locked",
+                modifier = Modifier.size(14.dp),
+                tint = TextMuted.copy(alpha = 0.5f)
+            )
+        }
+    }
+}
+@Composable
+fun WireframeBox(
+    isAccent: Boolean = false,
+    isPulsing: Boolean = false,
+    pulse: Float = 1f,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier.fillMaxSize()) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            val w = size.width
+            val h = size.height
+            val c = 14f
+            val lineColor = if (isAccent) TerminalGreen else LineColor
+            val strokeWidth = if (isAccent) Accent else Wire
+
+            // Основная рамка
+            drawRect(
+                color = lineColor,
+                topLeft = Offset.Zero,
+                size = size,
+                style = Stroke(width = strokeWidth)
+            )
+
+            // Уголки
+            drawLine(lineColor, Offset(0f, 0f), Offset(c, 0f), Accent)
+            drawLine(lineColor, Offset(0f, 0f), Offset(0f, c), Accent)
+            drawLine(lineColor, Offset(w - c, 0f), Offset(w, 0f), Accent)
+            drawLine(lineColor, Offset(w, 0f), Offset(w, c), Accent)
+            drawLine(lineColor, Offset(0f, h - c), Offset(0f, h), Accent)
+            drawLine(lineColor, Offset(0f, h), Offset(c, h), Accent)
+            drawLine(lineColor, Offset(w - c, h), Offset(w, h), Accent)
+            drawLine(lineColor, Offset(w, h - c), Offset(w, h), Accent)
+
+            // Пульсирующая подсветка для разблокированных
+            if (isPulsing) {
+                drawRect(
+                    color = TerminalGreen.copy(alpha = 0.1f * pulse),
+                    topLeft = Offset.Zero,
+                    size = size,
+                    style = Stroke(width = strokeWidth * 2)
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
+fun AwardFrontSide(
+    display: AwardDisplay,
+    caseStyle: TextCaseStyle,
+    isUnlocked: Boolean
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(8.dp)
+    ) {
+        AwardIconManager.getIconRes(display.award.iconKey)?.let {
+            Icon(
+                painter = painterResource(
+                    id = it
+                ),
+                contentDescription = display.award.name,
+                modifier = Modifier.size(100.dp),
+                tint = if (isUnlocked) Color.Unspecified else Color.Gray
+            )
+        }
+
+
+    }
+}
+
+@Composable
+fun AwardBackSide(
+    display: AwardDisplay,
+    caseStyle: TextCaseStyle
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PureBlack.copy(alpha = 0.95f))
+            .padding(12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = display.currentDescription.toDisplayCase(caseStyle),
+                color = TextSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                fontSize = 12.sp,
+                maxLines = 3
+            )
+
+            display.unlockedAt?.let {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = it.toDate().toString().substring(0, 10),
+                    color = TextMuted,
+                    fontSize = 10.sp
+                )
+            }
+        }
+    }
+}
 @Composable
 fun ReviewWireRow(
     rw: ReviewWithItem,
@@ -543,7 +941,8 @@ fun ProfileScreenPreview() {
                     )
                 ),
                 avatarUrl = "",
-                description = "описание"
+                description = "описание",
+                awards = listOf()
             ),
             onReviewClick = {},
             onShowDeleteConfirm = {},
