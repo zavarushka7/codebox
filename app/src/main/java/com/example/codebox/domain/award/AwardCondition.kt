@@ -1,4 +1,4 @@
-package com.example.codebox.domain
+package com.example.codebox.domain.award
 
 enum class AwardCondition {
     HATER,    // hater - количество отзывов с 1 звездой (1, 3, 5, 10, 50, 75, 100)

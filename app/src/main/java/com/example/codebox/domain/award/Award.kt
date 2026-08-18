@@ -1,5 +1,4 @@
-package com.example.codebox.domain
-
+package com.example.codebox.domain.award
 
 data class Award(
     val key: String = "",

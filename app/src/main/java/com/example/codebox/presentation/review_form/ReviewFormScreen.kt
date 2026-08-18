@@ -13,10 +13,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -38,9 +35,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -50,8 +46,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.codebox.domain.Item
-import com.example.codebox.domain.TextCaseStyle
-import com.example.codebox.domain.UserReview
+import com.example.codebox.domain.text_style.TextCaseStyle
+import com.example.codebox.domain.review.UserReview
 import com.example.codebox.presentation.common.*
 import com.example.codebox.presentation.components.AvatarImage
 import com.example.codebox.presentation.theme.*
@@ -63,7 +59,7 @@ private val LineColor = Color(0xFF777777)
 fun ReviewFormScreen(
     onBack: () -> Unit,
     onAuthorClick: (String) -> Unit,
-    onShowLikes: (String, String) -> Unit, // ← переход на экран лайков
+    onShowLikes: (String, String) -> Unit,
     viewModel: ReviewFormViewModel = hiltViewModel()
 ) {
     val item by viewModel.item.collectAsStateWithLifecycle()
@@ -74,6 +70,13 @@ fun ReviewFormScreen(
     val authorAvatarUrl by viewModel.authorAvatarUrl.collectAsStateWithLifecycle()
     val likeCount by viewModel.likeCount.collectAsStateWithLifecycle()
     val isLiked by viewModel.isLikedByMe.collectAsStateWithLifecycle()
+    val isSaving by viewModel.isSaving.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.saveComplete.collect {
+            onBack()
+        }
+    }
 
     if (item == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -89,17 +92,17 @@ fun ReviewFormScreen(
         review = review,
         authorName = authorName,
         isReadOnly = isReadOnly,
+        isSaving = isSaving,
         onCommentChange = viewModel::onCommentChange,
         onRatingChange = viewModel::onRatingChange,
         likeCount = likeCount,
         isLiked = isLiked,
-        onLikeClick = viewModel::toggleLike,        // ← тоггл через ViewModel
-        onShowLikes = {                            // ← навигация на список
+        onLikeClick = viewModel::toggleLike,
+        onShowLikes = {
             onShowLikes(item!!.id, review.userId)
         },
         onSave = {
             viewModel.saveReview()
-            onBack()
         },
         onBack = onBack,
         onAuthorClick = onAuthorClick
@@ -114,6 +117,7 @@ fun ReviewFormContent(
     review: UserReview,
     authorName: String,
     isReadOnly: Boolean,
+    isSaving: Boolean = false,
     onCommentChange: (String) -> Unit,
     onRatingChange: (Int) -> Unit,
     onSave: () -> Unit,
@@ -121,8 +125,8 @@ fun ReviewFormContent(
     onAuthorClick: (String) -> Unit,
     likeCount: Int = 0,
     isLiked: Boolean = false,
-    onLikeClick: () -> Unit = {},   // ← теперь без параметров
-    onShowLikes: () -> Unit = {},   // ← новый колбэк для счётчика
+    onLikeClick: () -> Unit = {},
+    onShowLikes: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -154,11 +158,11 @@ fun ReviewFormContent(
                     Icon(
                         imageVector = Icons.Outlined.Check,
                         contentDescription = "сохранить",
-                        tint = TerminalGreen,
+                        tint = if (isSaving) TextMuted else TerminalGreen,
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
                             .size(24.dp)
-                            .clickable { onSave() }
+                            .clickable(enabled = !isSaving) { onSave() }
                     )
                 }
             }
@@ -169,8 +173,10 @@ fun ReviewFormContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         if (isReadOnly) {
-            Row(modifier = Modifier.clickable { onAuthorClick(review.userId) },
-                verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.clickable { onAuthorClick(review.userId) },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 AvatarImage(
                     avatarData = authorAvatarUrl,
                     nickname = authorName,
@@ -184,7 +190,9 @@ fun ReviewFormContent(
                 )
             }
         }
+
         Spacer(modifier = Modifier.height(20.dp))
+
         Text(
             text = item.name,
             fontWeight = FontWeight.Bold,
@@ -199,6 +207,7 @@ fun ReviewFormContent(
             color = TextMuted
         )
         Spacer(modifier = Modifier.height(4.dp))
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             (1..5).forEach { star ->
                 Column(
@@ -237,6 +246,7 @@ fun ReviewFormContent(
             color = TextMuted
         )
         Spacer(modifier = Modifier.height(4.dp))
+
         OutlinedTextField(
             value = review.comment,
             onValueChange = onCommentChange,
@@ -257,10 +267,11 @@ fun ReviewFormContent(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
+
         LikeButton(
             isLiked = isLiked,
             count = likeCount,
-            onToggle = onLikeClick,   // ← сердечко тогглит
+            onToggle = onLikeClick,
             onCountClick = onShowLikes,
             isReadOnly = isReadOnly
         )
@@ -290,33 +301,24 @@ fun LikeButton(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // ─── Сердце — зона тапа 36×36, по центру иконка 20×20 ───
         Box(
             modifier = Modifier
                 .size(36.dp)
-                .then(
-                    if (isReadOnly) {
-                        Modifier.pointerInput(Unit) {
-                            detectTapGestures(
-                                onTap = {
-                                    targetScale = 0.75f
-                                    onToggle()
-                                }
-                            )
-                        }
-                    } else {
-                        Modifier  // ← Если readOnly - без pointerInput
-                    }
-                ),
+                .clickable(enabled = !isReadOnly) {
+                    targetScale = 0.75f
+                    onToggle()
+                }
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                },
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = heartIcon,
                 contentDescription = if (isLiked) "убрать лайк" else "поставить лайк",
                 tint = iconColor,
-                modifier = Modifier
-                    .size(20.dp)
-                    .scale(scale)
+                modifier = Modifier.size(20.dp)
             )
         }
 
@@ -326,22 +328,12 @@ fun LikeButton(
 
         Spacer(modifier = Modifier.width(2.dp))
 
-        // ─── Текст — отдельная зона тапа ───
         var isInitial by remember { mutableStateOf(true) }
         LaunchedEffect(Unit) { isInitial = false }
 
         Box(
             modifier = Modifier
-                .then(
-                if (isReadOnly) {
-                    Modifier
-                    .pointerInput(Unit) {
-                        detectTapGestures(onTap = { onCountClick() })
-                    }
-                } else {
-                    Modifier
-                }
-        )
+                .clickable(enabled = !isReadOnly) { onCountClick() }
                 .padding(horizontal = 4.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center
         ) {

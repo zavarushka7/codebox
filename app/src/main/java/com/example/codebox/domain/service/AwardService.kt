@@ -1,14 +1,13 @@
 package com.example.codebox.domain.service
 
-import android.util.Log
 import com.example.codebox.data.repository.AwardRepository
 import com.example.codebox.data.repository.ItemRepository
 import com.example.codebox.data.repository.LikeRepository
 import com.example.codebox.data.repository.UserReviewRepository
-import com.example.codebox.domain.Award
-import com.example.codebox.domain.AwardCondition
-import com.example.codebox.domain.UserAward
-import com.example.codebox.domain.UserReview
+import com.example.codebox.domain.award.Award
+import com.example.codebox.domain.award.AwardCondition
+import com.example.codebox.domain.award.UserAward
+import com.example.codebox.domain.review.UserReview
 import com.google.firebase.Timestamp
 import javax.inject.Inject
 
@@ -16,7 +15,8 @@ class AwardService @Inject constructor(
     private val awardRepository: AwardRepository,
     private val userReviewRepository: UserReviewRepository,
     private val itemRepository: ItemRepository,
-    private val likeRepository: LikeRepository
+    private val likeRepository: LikeRepository,
+    private val notificationService: NotificationService
 ) {
 
 
@@ -147,6 +147,20 @@ class AwardService @Inject constructor(
                 unlockedAt = Timestamp.now()
             )
             awardRepository.saveUserAward(userAward)
+            notificationService.notifyAwardUnlocked(
+                userId = userId,
+                awardName = award.name,
+                awardKey = award.key
+            )
+
+            if (rank > 1) {
+                notificationService.notifyRankUp(
+                    userId = userId,
+                    awardName = award.name,
+                    awardKey = award.key,
+                    newRank = rank
+                )
+            }
 
         } catch (e: Exception) {
 

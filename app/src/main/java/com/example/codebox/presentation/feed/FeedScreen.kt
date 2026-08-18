@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.codebox.domain.Item
-import com.example.codebox.domain.TextCaseStyle
+import com.example.codebox.domain.text_style.TextCaseStyle
 import com.example.codebox.presentation.common.*
 import com.example.codebox.presentation.theme.*
 
@@ -36,8 +36,6 @@ private val LineColor = Color(0xFF777777)
 @Composable
 fun FeedScreen(
     onItemClick: (String) -> Unit,
-    onProfileClick: () -> Unit,
-    onSearchClick: () -> Unit,
     viewModel: FeedViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

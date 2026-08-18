@@ -1,8 +1,7 @@
 package com.example.codebox.data.repository
 
-import android.util.Log
-import com.example.codebox.domain.ReviewWithAuthor
-import com.example.codebox.domain.UserReview
+import com.example.codebox.domain.review.ReviewWithAuthor
+import com.example.codebox.domain.review.UserReview
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -10,9 +9,6 @@ import javax.inject.Inject
 class UserReviewRepository @Inject constructor(
     private val firestore: FirebaseFirestore
 ) {
-    companion object {
-        private const val TAG = "UserReviewRepository"
-    }
     private fun doc(userId: String, itemId: String) =
         firestore.collection("user_reviews").document("${userId}_${itemId}")
 
@@ -25,25 +21,21 @@ class UserReviewRepository @Inject constructor(
                 comment = doc.getString("comment") ?: "",
                 rating = doc.getLong("rating")?.toInt() ?: 0,
                 countLikes = doc.getLong("countLikes")?.toInt() ?: 0,
-                likedBy = doc.get("likedBy") as? List<String> ?: emptyList() // ←
+                likedBy = doc.get("likedBy") as? List<String> ?: emptyList()
             )
         } else null
     }
 
     suspend fun getAllReviewsForUser(userId: String): List<UserReview> {
-        Log.d(TAG, "=== ЗАГРУЗКА ОТЗЫВОВ ПОЛЬЗОВАТЕЛЯ: $userId ===")
-
         return try {
             val snapshot = firestore.collection("user_reviews")
                 .whereEqualTo("userId", userId)
                 .get()
                 .await()
 
-            Log.d(TAG, "Найдено документов: ${snapshot.documents.size}")
-
-            val reviews = snapshot.documents.mapNotNull { doc ->
+            snapshot.documents.mapNotNull { doc ->
                 try {
-                    val review = UserReview(
+                    UserReview(
                         userId = doc.getString("userId") ?: "",
                         itemId = doc.getString("itemId") ?: "",
                         comment = doc.getString("comment") ?: "",
@@ -51,22 +43,11 @@ class UserReviewRepository @Inject constructor(
                         countLikes = doc.getLong("countLikes")?.toInt() ?: 0,
                         likedBy = doc.get("likedBy") as? List<String> ?: emptyList()
                     )
-                    Log.d(TAG, "  Отзыв: itemId=${review.itemId}, rating=${review.rating}")
-                    review
                 } catch (e: Exception) {
-                    Log.e(TAG, "Ошибка парсинга документа ${doc.id}", e)
                     null
                 }
             }
-
-            Log.d(TAG, "✅ Загружено отзывов: ${reviews.size}")
-            reviews.forEach { review ->
-                Log.d(TAG, "  - itemId=${review.itemId}, rating=${review.rating}")
-            }
-
-            reviews
         } catch (e: Exception) {
-            Log.e(TAG, "Ошибка загрузки отзывов пользователя", e)
             emptyList()
         }
     }
@@ -87,7 +68,7 @@ class UserReviewRepository @Inject constructor(
                 comment = doc.getString("comment") ?: "",
                 rating = doc.getLong("rating")?.toInt() ?: 0,
                 countLikes = doc.getLong("countLikes")?.toInt() ?: 0,
-                likedBy = doc.get("likedBy") as? List<String> ?: emptyList() // ←
+                likedBy = doc.get("likedBy") as? List<String> ?: emptyList()
             )
 
             val userDoc = firestore.collection("users").document(userId).get().await()
@@ -104,7 +85,7 @@ class UserReviewRepository @Inject constructor(
                 authorName = nickname,
                 avatarUrl = avatarData,
                 countLikes = review.countLikes,
-                likedBy = review.likedBy // ← если добавили в ReviewWithAuthor
+                likedBy = review.likedBy
             )
         }
     }
@@ -122,7 +103,6 @@ class UserReviewRepository @Inject constructor(
     }
 
     suspend fun saveReview(review: UserReview) {
-        // ← явная Map — Firestore точно сохранит likedBy как массив
         val data = hashMapOf(
             "userId" to review.userId,
             "itemId" to review.itemId,

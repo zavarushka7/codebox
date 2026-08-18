@@ -1,4 +1,4 @@
-package com.example.codebox.domain
+package com.example.codebox.domain.review
 
 data class ReviewWithAuthor(
     val userId: String = "",

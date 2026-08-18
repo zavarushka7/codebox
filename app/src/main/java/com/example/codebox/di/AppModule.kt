@@ -9,6 +9,7 @@ import com.example.codebox.data.repository.ItemRepository
 import com.example.codebox.data.repository.LikeRepository
 import com.example.codebox.data.repository.UserReviewRepository
 import com.example.codebox.domain.service.AwardService
+import com.example.codebox.domain.service.NotificationService
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -41,11 +42,13 @@ object AppModule {
         awardRepository: AwardRepository,
         userReviewRepository: UserReviewRepository,
         itemRepository: ItemRepository,
-        likeRepository: LikeRepository
+        likeRepository: LikeRepository,
+        notificationService: NotificationService
     ): AwardService {
         return AwardService(
             awardRepository, userReviewRepository,
-            itemRepository, likeRepository
+            itemRepository, likeRepository,
+            notificationService
         )
     }
 }

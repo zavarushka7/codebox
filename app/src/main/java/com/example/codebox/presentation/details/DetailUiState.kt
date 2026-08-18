@@ -1,8 +1,8 @@
 package com.example.codebox.presentation.details
 
 import com.example.codebox.domain.Item
-import com.example.codebox.domain.ReviewWithAuthor
-import com.example.codebox.domain.UserReview
+import com.example.codebox.domain.review.ReviewWithAuthor
+import com.example.codebox.domain.review.UserReview
 
 sealed class DetailUiState {
     data object Loading : DetailUiState()

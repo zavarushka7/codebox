@@ -1,4 +1,4 @@
-package com.example.codebox.domain
+package com.example.codebox.domain.award
 
 import com.google.firebase.Timestamp
 

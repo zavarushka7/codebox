@@ -1,9 +1,9 @@
 package com.example.codebox.data.repository
 
 import android.util.Log
-import com.example.codebox.domain.Award
-import com.example.codebox.domain.AwardCondition
-import com.example.codebox.domain.UserAward
+import com.example.codebox.domain.award.Award
+import com.example.codebox.domain.award.AwardCondition
+import com.example.codebox.domain.award.UserAward
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await

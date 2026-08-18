@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.codebox.data.repository.SettingsRepository
-import com.example.codebox.domain.TextCaseStyle
+import com.example.codebox.domain.text_style.TextCaseStyle
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore

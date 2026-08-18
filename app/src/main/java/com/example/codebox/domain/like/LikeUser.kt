@@ -1,4 +1,4 @@
-package com.example.codebox.domain
+package com.example.codebox.domain.like
 
 data class LikeUser(
     val userId: String = "",

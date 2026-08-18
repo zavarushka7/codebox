@@ -14,8 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.codebox.domain.LikeUser
-import com.example.codebox.domain.TextCaseStyle
+import com.example.codebox.domain.like.LikeUser
+import com.example.codebox.domain.text_style.TextCaseStyle
 import com.example.codebox.presentation.common.*
 import com.example.codebox.presentation.components.AvatarImage
 import com.example.codebox.presentation.theme.*

@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.codebox.domain.Item
-import com.example.codebox.domain.TextCaseStyle
+import com.example.codebox.domain.text_style.TextCaseStyle
 import com.example.codebox.presentation.common.*
 import com.example.codebox.presentation.theme.*
 

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
@@ -34,13 +35,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.codebox.domain.TextCaseStyle
+import com.example.codebox.domain.text_style.TextCaseStyle
 import com.example.codebox.presentation.theme.PureBlack
 import com.example.codebox.presentation.theme.TerminalGreen
 import com.example.codebox.presentation.theme.TextPrimary
@@ -113,7 +112,8 @@ fun WireBottomBar(
     currentTab: String,
     onFeed: () -> Unit,
     onSearch: () -> Unit,
-    onProfile: () -> Unit
+    onProfile: () -> Unit,
+    onNotification: () -> Unit
 ) {
     Column {
         HorizontalLine()
@@ -138,11 +138,18 @@ fun WireBottomBar(
                 onClick = onSearch
             )
             BottomNavIcon(
+                 icon = Icons.Outlined.Notifications,
+            label = "notitfication",
+            selected = currentTab == "notification",
+            onClick = onNotification
+            )
+            BottomNavIcon(
                 icon = Icons.Outlined.Person,
                 label = "profile",
                 selected = currentTab == "profile",
                 onClick = onProfile
             )
+
         }
     }
 }

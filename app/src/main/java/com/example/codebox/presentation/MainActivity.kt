@@ -27,6 +27,7 @@ import com.example.codebox.presentation.common.WireBottomBar
 import com.example.codebox.presentation.details.DetailScreen
 import com.example.codebox.presentation.feed.FeedScreen
 import com.example.codebox.presentation.likes.LikesListScreen
+import com.example.codebox.presentation.notification.NotificationScreen
 import com.example.codebox.presentation.profile.ProfileScreen
 
 import com.example.codebox.presentation.review_form.ReviewFormScreen
@@ -64,6 +65,7 @@ class MainActivity : ComponentActivity() {
                         currentRoute?.startsWith("profile") == true -> "profile"
                         currentRoute?.startsWith("settings") == true -> "profile"
                         currentRoute?.startsWith("catalog") == true -> "search"
+                        currentRoute?.startsWith("notification") == true -> "notification"
                         else -> "feed"
                     }
 
@@ -73,24 +75,29 @@ class MainActivity : ComponentActivity() {
                             WireBottomBar(
                                 currentTab = currentTab,
                                 onFeed = {
-                                    if (currentTab != "feed") {
-                                        navController.navigate("feed") {
-                                            popUpTo("feed") { inclusive = true }
-                                            launchSingleTop = true
-                                        }
-                                    }
+
+                                        navController.navigate("feed")
+
                                 },
                                 onSearch = {
+
+
                                     navController.navigate("catalog/${CatalogMode.SEARCH.name}")
+
+
+                                },
+                                onNotification = {
+
+                                    navController.navigate("notification")
+
+
                                 },
                                 onProfile = {
-                                    if (currentTab != "profile") {
-                                        navController.navigate("profile/$currentUserId") {
-                                            popUpTo("feed") { inclusive = true }
-                                            launchSingleTop = true
-                                        }
-                                    }
-                                }
+
+                                        navController.navigate("profile/$currentUserId")
+
+                                },
+
                             )
                         }
                     ) { paddingValues ->
@@ -104,10 +111,6 @@ class MainActivity : ComponentActivity() {
                                     onItemClick = { itemId ->
                                         navController.navigate("detail/$itemId")
                                     },
-                                    onProfileClick = { navController.navigate("profile") },
-                                    onSearchClick = {
-                                        navController.navigate("catalog/${CatalogMode.SEARCH.name}")
-                                    }
                                 )
                             }
 
@@ -134,7 +137,9 @@ class MainActivity : ComponentActivity() {
 // 2. Айтемы по типу
                             composable(
                                 route = "catalog/type/{type}",
-                                arguments = listOf(navArgument("type") { type = NavType.StringType })
+                                arguments = listOf(navArgument("type") {
+                                    type = NavType.StringType
+                                })
                             ) {
                                 CatalogScreen(
                                     onBack = { navController.popBackStack() },
@@ -149,7 +154,9 @@ class MainActivity : ComponentActivity() {
 // 3. Остальные режимы
                             composable(
                                 route = "catalog/{mode}",
-                                arguments = listOf(navArgument("mode") { type = NavType.StringType })
+                                arguments = listOf(navArgument("mode") {
+                                    type = NavType.StringType
+                                })
                             ) {
                                 CatalogScreen(
                                     onBack = { navController.popBackStack() },
@@ -194,13 +201,12 @@ class MainActivity : ComponentActivity() {
 
                             composable(
                                 route = "profile/{userId}",
-                                arguments = listOf(navArgument("userId"){
+                                arguments = listOf(navArgument("userId") {
                                     type = NavType.StringType
                                     nullable = true
                                     defaultValue = null
                                 }
-                            ) ){
-                                backStackEntry ->
+                                )) { backStackEntry ->
                                 val userId = backStackEntry.arguments?.getString("userId")
                                 ProfileScreen(
                                     userId = userId,
@@ -213,7 +219,7 @@ class MainActivity : ComponentActivity() {
                                     onSettingsClick = {
                                         navController.navigate("settings")
                                     },
-                                    onBack = { navController.popBackStack()}
+                                    onBack = { navController.popBackStack() }
                                 )
                             }
                             composable(
@@ -242,6 +248,24 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
+                            composable("notification") {
+                                NotificationScreen(
+
+                                    onReviewClick = { reviewId ->
+                                        // Извлекаем itemId из reviewId
+                                        val itemId = if (reviewId.contains("_")) {
+                                            reviewId.substringAfter("_")
+                                        } else {
+                                            reviewId
+                                        }
+                                        navController.navigate("review_form/$itemId")
+                                    },
+                                    onItemClick = { itemId ->
+                                        navController.navigate("detail/$itemId")
+
+                                    }
+                                )
+                            }
 
                         }
                     }

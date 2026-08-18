@@ -1,6 +1,5 @@
 package com.example.codebox.presentation.profile
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,10 +8,10 @@ import com.example.codebox.data.repository.ItemRepository
 import com.example.codebox.data.repository.LikeRepository
 import com.example.codebox.data.repository.SettingsRepository
 import com.example.codebox.data.repository.UserReviewRepository
-import com.example.codebox.domain.AwardCondition
-import com.example.codebox.domain.AwardDisplay
-import com.example.codebox.domain.ReviewWithItem
-import com.example.codebox.domain.TextCaseStyle
+import com.example.codebox.domain.award.AwardCondition
+import com.example.codebox.domain.award.AwardDisplay
+import com.example.codebox.domain.review.ReviewWithItem
+import com.example.codebox.domain.text_style.TextCaseStyle
 import com.example.codebox.domain.service.AwardService
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
@@ -39,70 +38,96 @@ class ProfileViewModel @Inject constructor(
     private val likeRepository: LikeRepository
 ) : ViewModel() {
 
-
-
     val textCaseStyle: StateFlow<TextCaseStyle> = settingsRepository.textCaseStyle
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TextCaseStyle.NORMAL)
 
     private val _uiState = MutableStateFlow<ProfileUiState>(ProfileUiState.Loading)
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
+
     private val profileUserId: String = savedStateHandle.get<String>("userId")
         ?: Firebase.auth.currentUser?.uid
         ?: ""
     val isReadOnly: Boolean = profileUserId != Firebase.auth.currentUser?.uid
 
     fun loadProfile() {
-
-
         viewModelScope.launch {
             _uiState.value = ProfileUiState.Loading
 
-
             try {
-
                 loadUserData()
-
                 awardService.checkAndAwardUser(profileUserId)
-
-
                 loadAwards()
-
-
             } catch (e: Exception) {
-
                 _uiState.value = ProfileUiState.Error(e.message ?: "ошибка загрузки профиля")
             }
         }
     }
+
+    private suspend fun loadUserData() {
+        try {
+            val userDoc = firestore.collection("users").document(profileUserId).get().await()
+
+            val nickname = userDoc.getString("nickname")
+                ?: userDoc.getString("displayName")
+                ?: "пользователь"
+
+            val reviews = userReviewRepository.getAllReviewsForUser(profileUserId)
+            val description = userDoc.getString("description") ?: ""
+
+            val reviewsWithItems = reviews.map { review ->
+                val item = itemRepository.getItemById(review.itemId)
+                ReviewWithItem(
+                    review = review,
+                    itemName = item?.name ?: review.itemId
+                )
+            }
+
+            val avatarUrl = userDoc.getString("avatarBase64")
+                ?: userDoc.getString("avatarUrl")
+                ?: ""
+
+            val email = userDoc.getString("email")
+                ?: if (profileUserId == Firebase.auth.currentUser?.uid) {
+                    Firebase.auth.currentUser?.email
+                } else null
+                    ?: ""
+
+            _uiState.value = ProfileUiState.Success(
+                email = email,
+                nickname = nickname,
+                avatarUrl = avatarUrl,
+                description = description,
+                reviews = reviewsWithItems,
+                awardsUiState = AwardsUiState.Loading  // ← изменено
+            )
+
+        } catch (e: Exception) {
+            throw e
+        }
+    }
+
     private suspend fun loadAwards() {
-
-
         try {
             val allAwards = awardRepository.getAllAwardDefinitions()
 
-
             if (allAwards.isEmpty()) {
-
                 val currentState = _uiState.value
                 if (currentState is ProfileUiState.Success) {
-                    _uiState.value = currentState.copy(awards = emptyList())
+                    _uiState.value = currentState.copy(
+                        awardsUiState = AwardsUiState.Empty
+                    )
                 }
                 return
             }
 
             val userAwards = awardRepository.getAllAwardsForUser(profileUserId)
-
-
-            // Получаем отзывы для вычисления прогресса
             val userReviews = userReviewRepository.getAllReviewsForUser(profileUserId)
-
 
             val awardDisplays = allAwards.map { award ->
                 val userAward = userAwards.find { it.awardKey == award.key }
                 val currentRank = userAward?.rank ?: 0
                 val isUnlocked = currentRank > 0
 
-                // Вычисляем текущее значение для условия
                 val currentValue = when (award.condition) {
                     AwardCondition.HATER -> userReviews.count { it.rating == 1 }
                     AwardCondition.LOVER -> userReviews.count { it.rating == 5 }
@@ -130,10 +155,9 @@ class ProfileViewModel @Inject constructor(
 
                 val isMaxRank = currentRank >= award.maxRank
 
-
                 AwardDisplay(
                     award = award,
-                    currentRank = currentRank,  // ← ВАЖНО! Передаем текущий ранг
+                    currentRank = currentRank,
                     maxRank = award.maxRank,
                     progress = currentValue.coerceAtMost(nextThreshold),
                     nextThreshold = nextThreshold,
@@ -143,84 +167,36 @@ class ProfileViewModel @Inject constructor(
                 )
             }
 
-            val unlockedCount = awardDisplays.count { it.isUnlocked }
-
-
             val currentState = _uiState.value
             if (currentState is ProfileUiState.Success) {
-
-                _uiState.value = currentState.copy(awards = awardDisplays)
-            }
-
-
-        } catch (e: Exception) {
-
-            throw e
-        }
-    }
-
-    private suspend fun loadUserData() {
-
-
-        try {
-            val userDoc = firestore.collection("users").document(profileUserId).get().await()
-
-
-            val nickname = userDoc.getString("nickname")
-                ?: userDoc.getString("displayName")
-                ?: "пользователь"
-
-
-            val reviews = userReviewRepository.getAllReviewsForUser(profileUserId)
-
-            val description = userDoc.getString("description") ?: ""
-
-
-            val reviewsWithItems = reviews.map { review ->
-                val item = itemRepository.getItemById(review.itemId)
-                ReviewWithItem(
-                    review = review,
-                    itemName = item?.name ?: review.itemId
+                _uiState.value = currentState.copy(
+                    awardsUiState = if (awardDisplays.isEmpty()) {
+                        AwardsUiState.Empty
+                    } else {
+                        AwardsUiState.Loaded(awardDisplays)
+                    }
                 )
             }
 
-
-            val avatarUrl = userDoc.getString("avatarBase64")
-                ?: userDoc.getString("avatarUrl")
-                ?: ""
-
-
-            val email = userDoc.getString("email")
-                ?: if (profileUserId == Firebase.auth.currentUser?.uid) {
-                    Firebase.auth.currentUser?.email
-                } else null
-                    ?: ""
-
-            _uiState.value = ProfileUiState.Success(
-                email = email,
-                nickname = nickname,
-                avatarUrl = avatarUrl,
-                description = description,
-                reviews = reviewsWithItems,
-                awards = emptyList()
-            )
-
         } catch (e: Exception) {
-
+            // При ошибке показываем пустое состояние
+            val currentState = _uiState.value
+            if (currentState is ProfileUiState.Success) {
+                _uiState.value = currentState.copy(
+                    awardsUiState = AwardsUiState.Empty
+                )
+            }
             throw e
         }
     }
 
     fun deleteReview(itemId: String) {
-
         viewModelScope.launch {
             try {
                 val userId = Firebase.auth.currentUser?.uid ?: return@launch
                 userReviewRepository.deleteReview(userId, itemId)
-
                 loadProfile()
             } catch (e: Exception) {
-
                 _uiState.value = ProfileUiState.Error("не удалось удалить: ${e.message}")
             }
         }

@@ -7,8 +7,8 @@ import com.example.codebox.data.repository.ItemRepository
 import com.example.codebox.data.repository.SettingsRepository
 import com.example.codebox.data.repository.UserReviewRepository
 import com.example.codebox.domain.Item
-import com.example.codebox.domain.UserReview
-import com.example.codebox.domain.TextCaseStyle
+import com.example.codebox.domain.review.UserReview
+import com.example.codebox.domain.text_style.TextCaseStyle
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import dagger.hilt.android.lifecycle.HiltViewModel

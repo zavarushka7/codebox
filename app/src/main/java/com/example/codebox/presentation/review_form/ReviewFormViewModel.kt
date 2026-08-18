@@ -7,26 +7,32 @@ import com.example.codebox.data.repository.ItemRepository
 import com.example.codebox.data.repository.SettingsRepository
 import com.example.codebox.data.repository.UserReviewRepository
 import com.example.codebox.domain.Item
-import com.example.codebox.domain.TextCaseStyle
-import com.example.codebox.domain.UserReview
+import com.example.codebox.domain.text_style.TextCaseStyle
+import com.example.codebox.domain.review.UserReview
+import com.example.codebox.domain.service.NotificationService
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+
 @HiltViewModel
 class ReviewFormViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val itemRepository: ItemRepository,
     private val userReviewRepository: UserReviewRepository,
     settingsRepository: SettingsRepository,
+    private val notificationService: NotificationService
 ) : ViewModel() {
 
     val textCaseStyle: StateFlow<TextCaseStyle> = settingsRepository.textCaseStyle
@@ -52,12 +58,17 @@ class ReviewFormViewModel @Inject constructor(
     private val _authorAvatarUrl = MutableStateFlow("")
     val authorAvatarUrl: StateFlow<String> = _authorAvatarUrl.asStateFlow()
 
-    // ← ЛАЙКИ
     private val _likeCount = MutableStateFlow(0)
     val likeCount: StateFlow<Int> = _likeCount.asStateFlow()
 
     private val _isLikedByMe = MutableStateFlow(false)
     val isLikedByMe: StateFlow<Boolean> = _isLikedByMe.asStateFlow()
+
+    private val _saveComplete = MutableSharedFlow<Unit>()
+    val saveComplete: SharedFlow<Unit> = _saveComplete.asSharedFlow()
+
+    private val _isSaving = MutableStateFlow(false)
+    val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
 
     init {
         load()
@@ -100,12 +111,29 @@ class ReviewFormViewModel @Inject constructor(
 
     fun saveReview() {
         if (isReadOnly) return
+        if (_isSaving.value) return
+
+        _isSaving.value = true
+        val review = _review.value
+
         viewModelScope.launch {
-            userReviewRepository.saveReview(_review.value)
+            try {
+                userReviewRepository.saveReview(review)
+                notificationService.notifyReviewCreated(
+                    userId = currentUserId,
+                    itemName = _item.value?.name ?: "",
+                    itemId = review.itemId,
+                    rating = review.rating,
+                    comment = review.comment
+                )
+                _isSaving.value = false
+                _saveComplete.emit(Unit)
+            } catch (e: Exception) {
+                _isSaving.value = false
+            }
         }
     }
 
-    // ← ПЕРЕКЛЮЧЕНИЕ ЛАЙКА
     fun toggleLike() {
         viewModelScope.launch {
             val currentlyLiked = _isLikedByMe.value
@@ -124,6 +152,17 @@ class ReviewFormViewModel @Inject constructor(
             )
 
             userReviewRepository.saveReview(_review.value)
+            if (!currentlyLiked && reviewUserId != currentUserId) {
+                notificationService.notifySomeoneLiked(
+                    targetUserId = reviewUserId,
+                    fromUserId = currentUserId,
+                    fromUserName = Firebase.auth.currentUser?.displayName ?: "Пользователь",
+                    itemId = itemId,
+                    itemName = _item.value?.name ?: "",
+                    reviewId =  _review.value.itemId ,
+                    avatarUrl = Firebase.auth.currentUser?.photoUrl?.toString() ?: ""
+                )
+            }
         }
     }
 }

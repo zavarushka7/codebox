@@ -4,8 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.codebox.data.repository.SettingsRepository
-import com.example.codebox.domain.LikeUser
-import com.example.codebox.domain.TextCaseStyle
+import com.example.codebox.domain.like.LikeUser
+import com.example.codebox.domain.text_style.TextCaseStyle
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

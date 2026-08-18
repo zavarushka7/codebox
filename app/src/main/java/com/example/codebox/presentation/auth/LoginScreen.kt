@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.codebox.R
-import com.example.codebox.domain.TextCaseStyle
+import com.example.codebox.domain.text_style.TextCaseStyle
 import com.example.codebox.presentation.common.*
 import com.example.codebox.presentation.theme.*
 
