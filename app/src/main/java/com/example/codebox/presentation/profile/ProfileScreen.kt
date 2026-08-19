@@ -4,7 +4,11 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -23,6 +27,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
@@ -51,10 +56,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.codebox.domain.Item
 import com.example.codebox.domain.award.AwardDisplay
 import com.example.codebox.domain.review.ReviewWithItem
-import com.example.codebox.domain.text_style.TextCaseStyle
 import com.example.codebox.domain.review.UserReview
+import com.example.codebox.domain.text_style.TextCaseStyle
 import com.example.codebox.presentation.components.AvatarImage
 import com.example.codebox.presentation.common.*
 import com.example.codebox.presentation.theme.*
@@ -73,6 +79,7 @@ fun ProfileScreen(
     onReviewClick: (String) -> Unit,
     onEditReviewClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
+    onAddFavouriteClick: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel(),
     onBack: () -> Unit
 ) {
@@ -84,6 +91,7 @@ fun ProfileScreen(
     LaunchedEffect(Unit) {
         viewModel.loadProfile()
     }
+
     ProfileScreenContent(
         caseStyle = caseStyle,
         uiState = uiState,
@@ -92,8 +100,10 @@ fun ProfileScreen(
         onShowDeleteConfirm = { showDeleteConfirm = it },
         onSettingsClick = onSettingsClick,
         isReadOnly = isReadOnly,
-        onBack = onBack
+        onBack = onBack,
+        onAddFavouriteClick = onAddFavouriteClick
     )
+
     if (showDeleteConfirm != null) {
         DeleteConfirmDialog(
             review = showDeleteConfirm!!,
@@ -116,7 +126,8 @@ fun ProfileScreenContent(
     onShowDeleteConfirm: (ReviewWithItem) -> Unit,
     onSettingsClick: () -> Unit,
     isReadOnly: Boolean,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onAddFavouriteClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -167,45 +178,51 @@ fun ProfileScreenContent(
             }
 
             // ─── Контент ───
-            Box(modifier = Modifier.weight(1f)) {
-                when (val state = uiState) {
-                    is ProfileUiState.Loading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            BlinkingCursor()
+            when (val state = uiState) {
+                is ProfileUiState.Loading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        BlinkingCursor()
+                    }
+                }
+                is ProfileUiState.Error -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                "// error".toDisplayCase(caseStyle),
+                                color = TextMuted,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                state.message,
+                                color = TextPrimary,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
                         }
                     }
-                    is ProfileUiState.Error -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    "// error".toDisplayCase(caseStyle),
-                                    color = TextMuted,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Text(
-                                    state.message,
-                                    color = TextPrimary,
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                            }
-                        }
-                    }
-                    is ProfileUiState.Success -> {
-                        ProfileBody(
-                            state = state,
-                            onReviewClick = onReviewClick,
-                            onShowDeleteConfirm = onShowDeleteConfirm,
-                            onEditReviewClick = onEditReviewClick,
-                            caseStyle = caseStyle,
-                            isReadOnly = isReadOnly
-                        )
-                    }
+                }
+                is ProfileUiState.Success -> {
+                    ProfileBody(
+                        state = state,
+                        onReviewClick = onReviewClick,
+                        onShowDeleteConfirm = onShowDeleteConfirm,
+                        onEditReviewClick = onEditReviewClick,
+                        caseStyle = caseStyle,
+                        isReadOnly = isReadOnly,
+                        onAddFavouriteClick = onAddFavouriteClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    )
                 }
             }
         }
@@ -301,7 +318,9 @@ private fun ProfileBody(
     onEditReviewClick: (String) -> Unit,
     onShowDeleteConfirm: (ReviewWithItem) -> Unit,
     caseStyle: TextCaseStyle,
-    isReadOnly: Boolean
+    isReadOnly: Boolean,
+    onAddFavouriteClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
     val scope = rememberCoroutineScope()
@@ -311,8 +330,7 @@ private fun ProfileBody(
         "награды".toDisplayCase(caseStyle)
     )
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // ─── Табы сразу под шапкой ───
+    Column(modifier = modifier) {
         TabRow(
             selectedTabIndex = pagerState.currentPage,
             containerColor = Color.Transparent,
@@ -343,7 +361,6 @@ private fun ProfileBody(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // ─── Пейджер со свайпом ───
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
@@ -357,11 +374,13 @@ private fun ProfileBody(
                     isReadOnly = isReadOnly,
                     onReviewClick = onReviewClick,
                     onEditReviewClick = onEditReviewClick,
-                    onShowDeleteConfirm = onShowDeleteConfirm
+                    onShowDeleteConfirm = onShowDeleteConfirm,
+                    onAddFavouriteClick = onAddFavouriteClick
                 )
                 1 -> AwardsPage(
-                    awardsUiState = state.awardsUiState,
-                    caseStyle = caseStyle)
+                    awards = state.awards,
+                    caseStyle = caseStyle
+                )
             }
         }
     }
@@ -374,7 +393,8 @@ private fun ProfileReviewsPage(
     isReadOnly: Boolean,
     onReviewClick: (String) -> Unit,
     onEditReviewClick: (String) -> Unit,
-    onShowDeleteConfirm: (ReviewWithItem) -> Unit
+    onShowDeleteConfirm: (ReviewWithItem) -> Unit,
+    onAddFavouriteClick: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -382,7 +402,6 @@ private fun ProfileReviewsPage(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // ─── Аватар, ник, email, описание ───
         item {
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -415,7 +434,7 @@ private fun ProfileReviewsPage(
                 Column {
                     val countReview = state.reviews.count().toString()
                     Text(
-                        text = "количество ревью: ".toDisplayCase(caseStyle) + countReview,
+                        text = "количество ревью:".toDisplayCase(caseStyle) + countReview,
                         style = MaterialTheme.typography.bodyLarge,
                         color = TerminalGreen
                     )
@@ -449,6 +468,17 @@ private fun ProfileReviewsPage(
                 )
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // ─── Любимая четверка ───
+            if (!isReadOnly) {
+                FavouriteFourSection(
+                    favouriteFour = state.favouriteFour,
+                    onAddClick = onAddFavouriteClick,
+                    caseStyle = caseStyle
+                )
+            }
+
             Spacer(modifier = Modifier.height(4.dp))
             DottedDivider()
             Spacer(modifier = Modifier.height(24.dp))
@@ -464,7 +494,6 @@ private fun ProfileReviewsPage(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // ─── Список ревью ───
         if (state.reviews.isEmpty()) {
             item {
                 Box(
@@ -495,29 +524,10 @@ private fun ProfileReviewsPage(
 
 @Composable
 private fun AwardsPage(
-    awardsUiState: AwardsUiState,
+    awards: List<AwardDisplay>,
     caseStyle: TextCaseStyle
 ) {
-when (awardsUiState) {
-
-is AwardsUiState.Loading -> {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            BlinkingCursor()
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "// загрузка наград".toDisplayCase(caseStyle),
-                color = TextSecondary,
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
-    }
-
-}
-    is AwardsUiState.Empty ->{
+    if (awards.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -528,8 +538,7 @@ is AwardsUiState.Loading -> {
                 style = MaterialTheme.typography.bodyLarge
             )
         }
-    }
-    is AwardsUiState.Loaded -> {
+    } else {
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             modifier = Modifier.fillMaxWidth(),
@@ -537,7 +546,7 @@ is AwardsUiState.Loading -> {
             verticalArrangement = Arrangement.spacedBy(20.dp),
             contentPadding = PaddingValues(vertical = 16.dp, horizontal = 8.dp)
         ) {
-            items(awardsUiState.awards, key = { it.award.key }) { display ->
+            items(awards, key = { it.award.key }) { display ->
                 AwardItem(
                     display = display,
                     caseStyle = caseStyle,
@@ -546,10 +555,100 @@ is AwardsUiState.Loading -> {
             }
         }
     }
-
 }
 
+// ============================== ИСПРАВЛЕННЫЙ БЛОК ==============================
+
+@Composable
+fun FavouriteFourSection(
+    favouriteFour: List<Item>,
+    onAddClick: () -> Unit,
+    caseStyle: TextCaseStyle
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "// любимая четверка".toDisplayCase(caseStyle),
+            style = MaterialTheme.typography.titleMedium,
+            color = TextMuted
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            for (index in 0 until 4) {
+                val item = favouriteFour.getOrNull(index)
+                FavouriteSlot(
+                    item = item,
+                    onClick = { if (item == null) onAddClick() },
+                    modifier = Modifier.weight(1f)   // 👈 равномерное распределение
+                )
+            }
+        }
+    }
 }
+
+@Composable
+fun FavouriteSlot(
+    item: Item?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .height(80.dp)          // фиксированная высота
+            .clickable { onClick() }
+    ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawRect(
+                color = LineColor,
+                topLeft = Offset.Zero,
+                size = size,
+                style = Stroke(width = Wire)
+            )
+        }
+
+        if (item == null) {
+            Icon(
+                imageVector = Icons.Outlined.Add,
+                contentDescription = "Добавить",
+                tint = TextMuted,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(32.dp)
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = item.name,
+                    color = TerminalGreen,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontSize = 12.sp,
+                    maxLines = 1
+                )
+                Text(
+                    text = item.type,
+                    color = TextMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 10.sp,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+// ============================== КОНЕЦ ИСПРАВЛЕННОГО БЛОКА ==============================
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -570,7 +669,15 @@ fun AwardItem(
 
     val isUnlocked = display.isUnlocked
 
-
+    val infiniteTransition = rememberInfiniteTransition()
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
@@ -580,98 +687,74 @@ fun AwardItem(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .size(110.dp)
-        ) {
-            // Рамка всегда четкая - белая для заблокированных, зеленая для разблокированных
-            WireframeBox(
-                borderColor = if (isUnlocked) TerminalGreen else Color.White,
-            )
-
-            // Контент с эффектами для заблокированных
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(
-                        if (isUnlocked) {
-                            Modifier
-                        } else {
-                            Modifier
-                                .blur(6.dp)
-                                .alpha(0.4f)
-                        }
-                    )
-                    .graphicsLayer {
-                        rotationY = rotation
-                        cameraDistance = 8f * size.height
-                    }
-                    .clickable(enabled = isUnlocked) {
-                        if (isUnlocked) isFlipped = !isFlipped
-                    }
-            ) {
-                AnimatedContent(
-                    targetState = isFlipped,
-                    transitionSpec = {
-                        fadeIn() with fadeOut()
-                    }
-                ) { flipped ->
-                    if (flipped && isUnlocked) {
-                        // Оборотная сторона - отзеркаливаем текст обратно
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer {
-                                    // Компенсируем отражение родительского контейнера
-                                    scaleX = -1f
-                                }
-                        ) {
-                            AwardBackSide(
-                                display = display,
-                                caseStyle = caseStyle
-                            )
-                        }
+                .height(110.dp)
+                .then(
+                    if (isUnlocked) {
+                        Modifier
                     } else {
-                        AwardFrontSide(
+                        Modifier
+                            .blur(12.dp)
+                            .alpha(0.4f)
+                    }
+                )
+                .graphicsLayer {
+                    rotationY = rotation
+                    cameraDistance = 8f * size.height
+                }
+                .clickable(enabled = isUnlocked) {
+                    if (isUnlocked) isFlipped = !isFlipped
+                }
+        ) {
+            WireframeBox(
+                isAccent = isUnlocked,
+                isPulsing = isUnlocked,
+                pulse = pulse
+            )
+            AnimatedContent(
+                targetState = isFlipped,
+                transitionSpec = {
+                    fadeIn() with fadeOut()
+                }
+            ) { flipped ->
+                if (flipped && isUnlocked) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                scaleX = -1f
+                            }
+                    ) {
+                        AwardBackSide(
                             display = display,
-                            caseStyle = caseStyle,
-                            isUnlocked = isUnlocked
+                            caseStyle = caseStyle
                         )
                     }
+                } else {
+                    AwardFrontSide(
+                        display = display,
+                        caseStyle = caseStyle,
+                        isUnlocked = isUnlocked
+                    )
                 }
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        if (isUnlocked){
-            Text(
-                text = display.award.name.toDisplayCase(caseStyle),
-                color = if (isUnlocked) TerminalGreen else TextMuted,
-                style = MaterialTheme.typography.titleSmall,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                fontSize = 14.sp,
-            )
-            Spacer(modifier = Modifier.width(2.dp))
-            Text(
-                text = "${display.currentRank}/${display.award.maxRank}",
-                color = if (isUnlocked) TerminalGreen else TextMuted,
-                style = MaterialTheme.typography.titleSmall,
-                textAlign = TextAlign.Center,
-                fontSize = 10.sp,
-            )
-        } else {
-
-            Icon(
-                imageVector = Icons.Outlined.Lock,
-                contentDescription = "locked",
-                modifier = Modifier.size(14.dp),
-                tint = TextMuted.copy(alpha = 0.5f)
-            )
-        }
+        Text(
+            text = display.award.name.toDisplayCase(caseStyle),
+            color = if (isUnlocked) TerminalGreen else TextMuted,
+            style = MaterialTheme.typography.titleSmall,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            fontSize = 14.sp
+        )
     }
 }
 
 @Composable
 fun WireframeBox(
-    borderColor: Color = LineColor,
+    isAccent: Boolean = false,
+    isPulsing: Boolean = false,
+    pulse: Float = 1f,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -679,25 +762,33 @@ fun WireframeBox(
             val w = size.width
             val h = size.height
             val c = 14f
-            val strokeWidth = Accent
+            val lineColor = if (isAccent) TerminalGreen else LineColor
+            val strokeWidth = if (isAccent) Accent else Wire
 
-            // Основная рамка
             drawRect(
-                color = borderColor,
+                color = lineColor,
                 topLeft = Offset.Zero,
                 size = size,
                 style = Stroke(width = strokeWidth)
             )
 
-            // Уголки
-            drawLine(borderColor, Offset(0f, 0f), Offset(c, 0f), Accent)
-            drawLine(borderColor, Offset(0f, 0f), Offset(0f, c), Accent)
-            drawLine(borderColor, Offset(w - c, 0f), Offset(w, 0f), Accent)
-            drawLine(borderColor, Offset(w, 0f), Offset(w, c), Accent)
-            drawLine(borderColor, Offset(0f, h - c), Offset(0f, h), Accent)
-            drawLine(borderColor, Offset(0f, h), Offset(c, h), Accent)
-            drawLine(borderColor, Offset(w - c, h), Offset(w, h), Accent)
-            drawLine(borderColor, Offset(w, h - c), Offset(w, h), Accent)
+            drawLine(lineColor, Offset(0f, 0f), Offset(c, 0f), Accent)
+            drawLine(lineColor, Offset(0f, 0f), Offset(0f, c), Accent)
+            drawLine(lineColor, Offset(w - c, 0f), Offset(w, 0f), Accent)
+            drawLine(lineColor, Offset(w, 0f), Offset(w, c), Accent)
+            drawLine(lineColor, Offset(0f, h - c), Offset(0f, h), Accent)
+            drawLine(lineColor, Offset(0f, h), Offset(c, h), Accent)
+            drawLine(lineColor, Offset(w - c, h), Offset(w, h), Accent)
+            drawLine(lineColor, Offset(w, h - c), Offset(w, h), Accent)
+
+            if (isPulsing) {
+                drawRect(
+                    color = TerminalGreen.copy(alpha = 0.1f * pulse),
+                    topLeft = Offset.Zero,
+                    size = size,
+                    style = Stroke(width = strokeWidth * 2)
+                )
+            }
         }
     }
 }
@@ -717,16 +808,22 @@ fun AwardFrontSide(
     ) {
         AwardIconManager.getIconRes(display.award.iconKey)?.let {
             Icon(
-                painter = painterResource(
-                    id = it
-                ),
+                painter = painterResource(id = it),
                 contentDescription = display.award.name,
-                modifier = Modifier.size(100.dp),
+                modifier = Modifier.size(56.dp),
                 tint = if (isUnlocked) Color.Unspecified else Color.Gray
             )
         }
 
-
+        if (!isUnlocked) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Icon(
+                imageVector = Icons.Outlined.Lock,
+                contentDescription = "locked",
+                modifier = Modifier.size(16.dp),
+                tint = TextMuted.copy(alpha = 0.5f)
+            )
+        }
     }
 }
 
@@ -837,7 +934,7 @@ fun ReviewWireRow(
                 horizontalArrangement = Arrangement.End
             ) {
                 Text(
-                    text = if (expanded) "..." else "...",
+                    text = "...",
                     color = TerminalGreen,
                     fontSize = 22.sp,
                     style = MaterialTheme.typography.titleMedium,
@@ -899,8 +996,6 @@ fun ProfileScreenPreview() {
             uiState = ProfileUiState.Success(
                 email = "dev@codebox.app",
                 nickname = "codeNinja",
-                avatarUrl = "",
-                description = "описание",
                 reviews = listOf(
                     ReviewWithItem(
                         review = UserReview(
@@ -927,7 +1022,10 @@ fun ProfileScreenPreview() {
                         itemName = "go"
                     )
                 ),
-
+                avatarUrl = "",
+                description = "описание",
+                awards = emptyList(),
+                favouriteFour = emptyList()
             ),
             onReviewClick = {},
             onShowDeleteConfirm = {},
@@ -936,7 +1034,7 @@ fun ProfileScreenPreview() {
             caseStyle = TextCaseStyle.NORMAL,
             isReadOnly = false,
             onBack = {},
-
+            onAddFavouriteClick = {}
         )
     }
 }

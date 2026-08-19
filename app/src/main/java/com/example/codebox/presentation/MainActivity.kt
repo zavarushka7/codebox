@@ -9,11 +9,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.Observer
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -29,14 +27,14 @@ import com.example.codebox.presentation.feed.FeedScreen
 import com.example.codebox.presentation.likes.LikesListScreen
 import com.example.codebox.presentation.notification.NotificationScreen
 import com.example.codebox.presentation.profile.ProfileScreen
-
+import com.example.codebox.presentation.profile.ProfileViewModel
 import com.example.codebox.presentation.review_form.ReviewFormScreen
 import com.example.codebox.presentation.settings.SettingsScreen
 import com.example.codebox.presentation.theme.CodeboxTheme
-
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import dagger.hilt.android.AndroidEntryPoint
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -75,29 +73,17 @@ class MainActivity : ComponentActivity() {
                             WireBottomBar(
                                 currentTab = currentTab,
                                 onFeed = {
-
-                                        navController.navigate("feed")
-
+                                    navController.navigate("feed")
                                 },
                                 onSearch = {
-
-
                                     navController.navigate("catalog/${CatalogMode.SEARCH.name}")
-
-
                                 },
                                 onNotification = {
-
                                     navController.navigate("notification")
-
-
                                 },
                                 onProfile = {
-
-                                        navController.navigate("profile/$currentUserId")
-
+                                    navController.navigate("profile/$currentUserId")
                                 },
-
                             )
                         }
                     ) { paddingValues ->
@@ -123,9 +109,7 @@ class MainActivity : ComponentActivity() {
                                         navController.navigate("review_form/$itemId")
                                     },
                                     onReviewAuthorClick = { authorUserId ->
-
                                         navController.navigate("profile/$authorUserId")
-
                                     },
                                     onReviewClick = { _, authorUserId ->
                                         navController.navigate("review_form/$itemId?userId=$authorUserId")
@@ -133,8 +117,6 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
-
-// 2. Айтемы по типу
                             composable(
                                 route = "catalog/type/{type}",
                                 arguments = listOf(navArgument("type") {
@@ -151,29 +133,40 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
-// 3. Остальные режимы
                             composable(
                                 route = "catalog/{mode}",
                                 arguments = listOf(navArgument("mode") {
                                     type = NavType.StringType
                                 })
-                            ) {
+                            ) { backStackEntry ->
+                                val mode = backStackEntry.arguments?.getString("mode") ?: "SEARCH"
+                                val isSelectionMode = mode == "FAVOURITE_SELECT"
+
                                 CatalogScreen(
-                                    onBack = { navController.popBackStack() },
-                                    onItemClick = { itemId -> navController.navigate("detail/$itemId") },
+                                    onBack = {
+                                        navController.popBackStack()
+                                    },
+                                    onItemClick = { itemId ->
+                                        if (isSelectionMode) {
+                                            navController.previousBackStackEntry?.savedStateHandle?.set("selected_item", itemId)
+                                            navController.popBackStack()
+                                        } else {
+                                            navController.navigate("detail/$itemId")
+                                        }
+                                    },
                                     onSearchByTypeClick = {
                                         navController.navigate("catalog/${CatalogMode.TYPES_LIST.name}")
-                                    },
-                                    onTypeClick = { type ->
-                                        navController.navigate("catalog/type/${Uri.encode(type)}")
                                     },
                                     onHighestTopClick = {
                                         navController.navigate("catalog/${CatalogMode.TOP_RATED.name}")
                                     },
                                     onLowestTopClick = {
                                         navController.navigate("catalog/${CatalogMode.LOWEST_RATED.name}")
-                                    }
-
+                                    },
+                                    onTypeClick = { type ->
+                                        navController.navigate("catalog/type/${Uri.encode(type)}")
+                                    },
+                                    isSelectionMode = isSelectionMode
                                 )
                             }
 
@@ -193,7 +186,7 @@ class MainActivity : ComponentActivity() {
                                     onAuthorClick = { authorUserId ->
                                         navController.navigate("profile/$authorUserId")
                                     },
-                                    onShowLikes = { itemId, reviewUserId ->   // ← только для счётчика
+                                    onShowLikes = { itemId, reviewUserId ->
                                         navController.navigate("likes/$itemId/$reviewUserId")
                                     }
                                 )
@@ -205,11 +198,29 @@ class MainActivity : ComponentActivity() {
                                     type = NavType.StringType
                                     nullable = true
                                     defaultValue = null
-                                }
-                                )) { backStackEntry ->
+                                })
+                            ) { backStackEntry ->
                                 val userId = backStackEntry.arguments?.getString("userId")
+                                val profileViewModel: ProfileViewModel = hiltViewModel()
+
+                                // Обработка результата выбора айтема
+                                DisposableEffect(Unit) {
+                                    val savedStateHandle = backStackEntry.savedStateHandle
+                                    val observer = Observer<String> { itemId ->
+                                        if (itemId != null) {
+                                            profileViewModel.addFavouriteItem(itemId)
+                                            savedStateHandle.remove<String>("selected_item")
+                                        }
+                                    }
+                                    savedStateHandle.getLiveData<String>("selected_item").observeForever(observer)
+                                    onDispose {
+                                        savedStateHandle.getLiveData<String>("selected_item").removeObserver(observer)
+                                    }
+                                }
+
                                 ProfileScreen(
                                     userId = userId,
+                                    viewModel = profileViewModel,
                                     onReviewClick = { itemId ->
                                         navController.navigate("detail/$itemId")
                                     },
@@ -219,9 +230,13 @@ class MainActivity : ComponentActivity() {
                                     onSettingsClick = {
                                         navController.navigate("settings")
                                     },
+                                    onAddFavouriteClick = {
+                                        navController.navigate("catalog/${CatalogMode.FAVOURITE_SELECT.name}")
+                                    },
                                     onBack = { navController.popBackStack() }
                                 )
                             }
+
                             composable(
                                 route = "likes/{itemId}/{userId}",
                                 arguments = listOf(
@@ -237,7 +252,6 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
-
                             composable("settings") {
                                 SettingsScreen(
                                     onBack = { navController.popBackStack() },
@@ -250,9 +264,7 @@ class MainActivity : ComponentActivity() {
 
                             composable("notification") {
                                 NotificationScreen(
-
                                     onReviewClick = { reviewId ->
-                                        // Извлекаем itemId из reviewId
                                         val itemId = if (reviewId.contains("_")) {
                                             reviewId.substringAfter("_")
                                         } else {
@@ -262,11 +274,9 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onItemClick = { itemId ->
                                         navController.navigate("detail/$itemId")
-
                                     }
                                 )
                             }
-
                         }
                     }
                 }

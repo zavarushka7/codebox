@@ -5,5 +5,6 @@ enum class CatalogMode {
     TYPES_LIST,
     BY_TYPE,
     TOP_RATED,
-    LOWEST_RATED
+    LOWEST_RATED,
+    FAVOURITE_SELECT
 }

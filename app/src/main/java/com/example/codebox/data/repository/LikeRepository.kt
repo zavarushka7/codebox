@@ -1,5 +1,6 @@
 package com.example.codebox.data.repository
 
+import android.annotation.SuppressLint
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -8,6 +9,7 @@ class LikeRepository @Inject constructor(
     private val firestore: FirebaseFirestore
 )
 {
+    @SuppressLint("SuspiciousIndentation")
     suspend fun getLikesGiven(userId: String) : Int {
         return try {
             val snapshot = firestore.collection("user_reviews")

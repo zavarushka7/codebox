@@ -46,6 +46,7 @@ fun CatalogScreen(
     onHighestTopClick: () -> Unit,
     onLowestTopClick: () -> Unit,
     onTypeClick: (String) -> Unit,
+    isSelectionMode: Boolean = false,
     viewModel: CatalogViewModel = hiltViewModel()
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
@@ -66,7 +67,8 @@ fun CatalogScreen(
         onSearchByTypeClick = onSearchByTypeClick,
         onHighestTopClick = onHighestTopClick,
         onLowestTopClick = onLowestTopClick,
-        onTypeClick = onTypeClick
+        onTypeClick = onTypeClick,
+        isSelectionMode = isSelectionMode
     )
 }
 
@@ -83,7 +85,8 @@ fun CatalogScreenContent(
     onSearchByTypeClick: () -> Unit,
     onHighestTopClick: () -> Unit,
     onLowestTopClick: () -> Unit,
-    onTypeClick: (String) -> Unit
+    onTypeClick: (String) -> Unit,
+    isSelectionMode: Boolean = false
 ) {
     val title = when (mode) {
         CatalogMode.SEARCH -> "// поиск".toDisplayCase(caseStyle)
@@ -91,6 +94,7 @@ fun CatalogScreenContent(
         CatalogMode.BY_TYPE -> "// тип: ${typeFilter.ifBlank { "все".toDisplayCase(caseStyle) }}"
         CatalogMode.TOP_RATED -> "// топ рейтинг".toDisplayCase(caseStyle)
         CatalogMode.LOWEST_RATED -> "// низкий рейтинг".toDisplayCase(caseStyle)
+        CatalogMode.FAVOURITE_SELECT -> "// поиск".toDisplayCase(caseStyle)
     }
 
     Box(
@@ -143,7 +147,7 @@ fun CatalogScreenContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (mode == CatalogMode.SEARCH) {
+            if (mode == CatalogMode.SEARCH || mode == CatalogMode.FAVOURITE_SELECT) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = onQueryChange,
@@ -171,103 +175,108 @@ fun CatalogScreenContent(
                 Spacer(modifier = Modifier.height(26.dp))
             }
 
-            Box(modifier = Modifier.weight(1f)) {
-                when (val state = uiState) {
-                    is CatalogUiState.Idle -> {
-                        if (mode == CatalogMode.SEARCH) {
-                            Column(
-                                modifier = Modifier.fillMaxSize(),
-                                verticalArrangement = Arrangement.Top
-                            ) {
-                                FilterOptionRow(
-                                    label = "тип данных".toDisplayCase(caseStyle),
-                                    onClick = onSearchByTypeClick
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                FilterOptionRow(
-                                    label = "с наибольшим рейтингом".toDisplayCase(caseStyle),
-                                    onClick = onHighestTopClick
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                FilterOptionRow(
-                                    label = "с наименьшим рейтингом".toDisplayCase(caseStyle),
-                                    onClick = onLowestTopClick
-                                )
-                            }
-                        }
+    Box(modifier = Modifier.weight(1f)) {
+        when (val state = uiState) {
+            is CatalogUiState.Idle -> {
+                if (mode == CatalogMode.SEARCH) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Top
+                    ) {
+                        FilterOptionRow(
+                            label = "тип данных".toDisplayCase(caseStyle),
+                            onClick = onSearchByTypeClick
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        FilterOptionRow(
+                            label = "с наибольшим рейтингом".toDisplayCase(caseStyle),
+                            onClick = onHighestTopClick
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        FilterOptionRow(
+                            label = "с наименьшим рейтингом".toDisplayCase(caseStyle),
+                            onClick = onLowestTopClick
+                        )
                     }
-                    is CatalogUiState.Loading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            BlinkingCursor()
-                        }
+                }
+            }
+
+            is CatalogUiState.Loading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    BlinkingCursor()
+                }
+            }
+
+            is CatalogUiState.Error -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "// error".toDisplayCase(caseStyle),
+                            color = TextMuted,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = state.message,
+                            color = TextPrimary,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
                     }
-                    is CatalogUiState.Error -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = "// error".toDisplayCase(caseStyle),
-                                    color = TextMuted,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Text(
-                                    text = state.message,
-                                    color = TextPrimary,
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                            }
-                        }
+                }
+            }
+
+            is CatalogUiState.TypesSuccess -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    items(state.types, key = { it }) { type ->
+                        TypeRow(
+                            type = type,
+                            caseStyle = caseStyle,
+                            onClick = { onTypeClick(type) }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
-                    is CatalogUiState.TypesSuccess -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(vertical = 8.dp)
-                        ) {
-                            items(state.types, key = { it }) { type ->
-                                TypeRow(
-                                    type = type,
-                                    caseStyle = caseStyle,
-                                    onClick = { onTypeClick(type) }
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                            }
-                        }
+                }
+            }
+
+            is CatalogUiState.Success -> {
+                if (state.items.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "// ничего не найдено".toDisplayCase(caseStyle),
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
                     }
-                    is CatalogUiState.Success -> {
-                        if (state.items.isEmpty()) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "// ничего не найдено".toDisplayCase(caseStyle),
-                                    color = TextSecondary,
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                            }
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(vertical = 8.dp)
-                            ) {
-                                items(state.items, key = { it.id }) { item ->
-                                    CatalogItemRow(
-                                        item = item,
-                                        caseStyle = caseStyle,
-                                        onClick = { onItemClick(item.id) }
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                }
-                            }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        items(state.items, key = { it.id }) { item ->
+                            CatalogItemRow(
+                                item = item,
+                                caseStyle = caseStyle,
+                                onClick = { onItemClick(item.id) }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
                 }
             }
+
+    }
+}
         }
     }
 }

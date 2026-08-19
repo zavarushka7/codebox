@@ -57,7 +57,7 @@ class CatalogViewModel @Inject constructor(
         typeFilter = savedStateHandle.get<String>("type") ?: ""
 
         when (mode) {
-            CatalogMode.SEARCH -> {
+            CatalogMode.SEARCH, CatalogMode.FAVOURITE_SELECT -> {  // ← ДОБАВЛЕН FAVOURITE_SELECT
                 _query
                     .debounce(300)
                     .filter { it.isNotBlank() }
@@ -68,11 +68,12 @@ class CatalogViewModel @Inject constructor(
             CatalogMode.BY_TYPE -> loadByType(typeFilter)
             CatalogMode.TOP_RATED -> loadTopRated()
             CatalogMode.LOWEST_RATED -> loadLowestRated()
+            else -> {}
         }
     }
 
     fun onQueryChange(newQuery: String) {
-        if (mode != CatalogMode.SEARCH) return
+        if (mode != CatalogMode.SEARCH && mode != CatalogMode.FAVOURITE_SELECT) return  // ← ДОБАВЛЕН FAVOURITE_SELECT
         _query.value = newQuery
         if (newQuery.isBlank()) {
             _uiState.value = CatalogUiState.Idle

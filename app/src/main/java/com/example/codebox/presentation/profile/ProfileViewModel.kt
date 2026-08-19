@@ -1,13 +1,10 @@
 package com.example.codebox.presentation.profile
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.codebox.data.repository.AwardRepository
-import com.example.codebox.data.repository.ItemRepository
-import com.example.codebox.data.repository.LikeRepository
-import com.example.codebox.data.repository.SettingsRepository
-import com.example.codebox.data.repository.UserReviewRepository
+import com.example.codebox.data.repository.*
 import com.example.codebox.domain.award.AwardCondition
 import com.example.codebox.domain.award.AwardDisplay
 import com.example.codebox.domain.review.ReviewWithItem
@@ -17,11 +14,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -35,8 +28,13 @@ class ProfileViewModel @Inject constructor(
     settingsRepository: SettingsRepository,
     private val awardService: AwardService,
     private val awardRepository: AwardRepository,
-    private val likeRepository: LikeRepository
+    private val likeRepository: LikeRepository,
+    private val favouriteFourRepository: FavouriteFourRepository
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "ProfileViewModel"
+    }
 
     val textCaseStyle: StateFlow<TextCaseStyle> = settingsRepository.textCaseStyle
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TextCaseStyle.NORMAL)
@@ -49,14 +47,19 @@ class ProfileViewModel @Inject constructor(
         ?: ""
     val isReadOnly: Boolean = profileUserId != Firebase.auth.currentUser?.uid
 
+    // Флаг, загружены ли основные данные
+    private var isUserDataLoaded = false
+
     fun loadProfile() {
         viewModelScope.launch {
             _uiState.value = ProfileUiState.Loading
 
             try {
                 loadUserData()
+                isUserDataLoaded = true
                 awardService.checkAndAwardUser(profileUserId)
                 loadAwards()
+                loadFavouriteFour()
             } catch (e: Exception) {
                 _uiState.value = ProfileUiState.Error(e.message ?: "ошибка загрузки профиля")
             }
@@ -98,7 +101,8 @@ class ProfileViewModel @Inject constructor(
                 avatarUrl = avatarUrl,
                 description = description,
                 reviews = reviewsWithItems,
-                awardsUiState = AwardsUiState.Loading  // ← изменено
+                awards = emptyList(),
+                favouriteFour = emptyList()
             )
 
         } catch (e: Exception) {
@@ -113,9 +117,7 @@ class ProfileViewModel @Inject constructor(
             if (allAwards.isEmpty()) {
                 val currentState = _uiState.value
                 if (currentState is ProfileUiState.Success) {
-                    _uiState.value = currentState.copy(
-                        awardsUiState = AwardsUiState.Empty
-                    )
+                    _uiState.value = currentState.copy(awards = emptyList())
                 }
                 return
             }
@@ -169,24 +171,96 @@ class ProfileViewModel @Inject constructor(
 
             val currentState = _uiState.value
             if (currentState is ProfileUiState.Success) {
-                _uiState.value = currentState.copy(
-                    awardsUiState = if (awardDisplays.isEmpty()) {
-                        AwardsUiState.Empty
-                    } else {
-                        AwardsUiState.Loaded(awardDisplays)
-                    }
-                )
+                _uiState.value = currentState.copy(awards = awardDisplays)
             }
 
         } catch (e: Exception) {
-            // При ошибке показываем пустое состояние
             val currentState = _uiState.value
             if (currentState is ProfileUiState.Success) {
-                _uiState.value = currentState.copy(
-                    awardsUiState = AwardsUiState.Empty
-                )
+                _uiState.value = currentState.copy(awards = emptyList())
             }
             throw e
+        }
+    }
+
+    private suspend fun loadFavouriteFour() {
+        try {
+            Log.d(TAG, "loadFavouriteFour: userId=$profileUserId")
+
+            val favouriteFourData = favouriteFourRepository.getFavouriteFour(profileUserId)
+            Log.d(TAG, "favouriteFourData.favouriteFour = ${favouriteFourData.favouriteFour}")
+
+            val items = favouriteFourData.favouriteFour.mapNotNull { itemId ->
+                val item = itemRepository.getItemById(itemId)
+                Log.d(TAG, "itemId=$itemId -> item=${item?.name}")
+                item
+            }
+
+            Log.d(TAG, "Загружено ${items.size} айтемов в любимую четверку")
+
+            // ✅ Исправление: всегда берем текущее состояние из _uiState.value
+            val currentState = _uiState.value
+            if (currentState is ProfileUiState.Success) {
+                Log.d(TAG, "Обновление favouriteFour в uiState (Success)")
+                _uiState.value = currentState.copy(favouriteFour = items)
+            } else {
+                Log.w(TAG, "Состояние не Success: ${currentState::class.simpleName}, пропускаем обновление")
+                // ✅ Если состояние еще Loading, создаем Success с пустыми данными
+                if (currentState is ProfileUiState.Loading) {
+                    Log.d(TAG, "Создаем Success с пустыми данными")
+                    _uiState.value = ProfileUiState.Success(
+                        email = null,
+                        nickname = "",
+                        avatarUrl = "",
+                        description = "",
+                        reviews = emptyList(),
+                        awards = emptyList(),
+                        favouriteFour = items
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Ошибка загрузки любимой четверки", e)
+        }
+    }
+
+    fun addFavouriteItem(itemId: String) {
+        Log.d(TAG, "addFavouriteItem: itemId=$itemId")
+
+        viewModelScope.launch {
+            try {
+                val current = favouriteFourRepository.getFavouriteFour(profileUserId)
+                Log.d(TAG, "Текущий список: ${current.favouriteFour}")
+
+                if (current.favouriteFour.size >= 4) {
+                    Log.d(TAG, "⚠️ Уже 4 айтема, не добавляем")
+                    return@launch
+                }
+                if (current.favouriteFour.contains(itemId)) {
+                    Log.d(TAG, "⚠️ Айтем уже есть в списке")
+                    return@launch
+                }
+
+                favouriteFourRepository.addItem(profileUserId, itemId)
+                Log.d(TAG, "✅ Айтем добавлен, перезагружаем")
+                loadFavouriteFour()
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Ошибка добавления айтема", e)
+            }
+        }
+    }
+
+    fun removeFavouriteItem(itemId: String) {
+        Log.d(TAG, "removeFavouriteItem: itemId=$itemId")
+
+        viewModelScope.launch {
+            try {
+                favouriteFourRepository.removeItem(profileUserId, itemId)
+                Log.d(TAG, "✅ Айтем удален, перезагружаем")
+                loadFavouriteFour()
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Ошибка удаления айтема", e)
+            }
         }
     }
 
